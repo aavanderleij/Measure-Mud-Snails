@@ -1,0 +1,13 @@
+name: mudsnail
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - opencv
+  - scikit-image
+  - scikit-learn
+  - matplotlib
+  - imutils
+  - scipy
+  - numpy
