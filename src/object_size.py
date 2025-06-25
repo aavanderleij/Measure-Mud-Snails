@@ -28,6 +28,33 @@ class ImageRuler:
         """
         return ((point_a[0] + point_b[0]) * 0.5, (point_a[1] + point_b[1]) * 0.5)
     
+    def annotate_dimensions(self, image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
+        """
+        Annotates the image with the measured dimensions of the detected rectangle.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
+
+        Returns:
+            None
+        """
+        # Calculate distances in pixels
+        dA = distance.euclidean((tltrX, tltrY), (blbrX, blbrY))
+        dB = distance.euclidean((tlblX, tlblY), (trbrX, trbrY))
+        # Convert to real-world units using the reference length
+        pixels_per_metric = 78.63018599673104
+        print(f"Distance A (pixels): {dA}, Distance B (pixels): {dB}")
+        dimA = dA / pixels_per_metric
+        dimB = dB / pixels_per_metric
+        # Annotate the dimensions on the image
+        cv2.putText(image, "{:.1f}mm".format(dimA),
+                    (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (0, 255, 255), 3)
+        cv2.putText(image, "{:.1f}mm".format(dimB),
+                    (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (0, 255, 255), 3)
+    
 class ReferenceObject(ImageRuler):
     
     def __init__(self, reference_length_mm):
@@ -132,31 +159,9 @@ class ReferenceObject(ImageRuler):
         cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
         cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
 
-    def annotate_dimensions(self, image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
-        """
-        Annotates the image with the measured dimensions of the detected rectangle.
+    
+        
 
-        Args:
-            image (numpy.ndarray): The image to annotate.
-            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
-
-        Returns:
-            None
-        """
-        # Calculate distances in pixels
-        dA = distance.euclidean((tltrX, tltrY), (blbrX, blbrY))
-        dB = distance.euclidean((tlblX, tlblY), (trbrX, trbrY))
-        # Convert to real-world units using the reference length
-        pixelsPerMetric = dB / self.reference_length_mm
-        dimA = dA / pixelsPerMetric
-        dimB = dB / pixelsPerMetric
-        # Annotate the dimensions on the image
-        cv2.putText(image, "{:.1f}mm".format(dimA),
-                    (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-                    3, (0, 255, 255), 3)
-        cv2.putText(image, "{:.1f}mm".format(dimB),
-                    (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-                    3, (0, 255, 255), 3)
 
     def detect_and_annotate(self, image):
         """
@@ -186,14 +191,14 @@ class SnailObject(ImageRuler):
         # Blur to reduce noise
         blured = cv2.GaussianBlur(gray, (7, 7), 0)
         # Edge detection
-        edged = cv2.Canny(blured, 10, 70)
+        edged = cv2.Canny(blured, 10, 40)
         # Morphological operations to close gaps
-        edged = cv2.dilate(edged, None, iterations=5)
+        edged = cv2.dilate(edged, None, iterations=2)
         edged = cv2.erode(edged, None, iterations=1)
         # Show the blurred image for inspection
-        plt.imshow(cv2.cvtColor(blured, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
+        # plt.imshow(cv2.cvtColor(blured, cv2.COLOR_BGR2RGB))
+        # plt.axis('off')
+        # plt.show()
         return edged
 
     def get_contours(self, edged, image):
@@ -205,23 +210,35 @@ class SnailObject(ImageRuler):
         cnts = imutils.grab_contours(cnts)
         (cnts, _) = imutils.contours.sort_contours(cnts)
         print(f"Found {len(cnts)} contours in the image.")
-        print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 100)}")
+        print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 1000)}")
         for contour in cnts:
-            if cv2.contourArea(contour) < 10:
+            if cv2.contourArea(contour) < 1000:
                 continue
+            # Draw contour
+            cv2.drawContours(image, [contour.astype("int")], -1, (0, 255, 0), 2)
             # Get the minimum area rectangle and its box points
             box = cv2.minAreaRect(contour)
-            box = cv2.boxPoints(box)
-            box = np.array(box, dtype="int")
-            box = perspective.order_points(box)
+            box_points = cv2.boxPoints(box)
+            box_points = np.array(box_points, dtype="int")
+            box_points = perspective.order_points(box_points)
             # Draw the rectangle and its corners
-            cv2.drawContours(image, [box.astype("int")], -1, (0, 255, 0), 2)
-            for (x, y) in box:
+            cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+            for (x, y) in box_points:
                 cv2.circle(image, (int(x), int(y)), 5, (0, 0, 255), -1)
+            # Annotate dimensions (reuse from ReferenceObject)
+            (top_left, top_right, bottom_right, bottom_left) = box_points
+            (tltrX, tltrY) = self.midpoint(top_left, top_right)
+            (blbrX, blbrY) = self.midpoint(bottom_left, bottom_right)
+            (tlblX, tlblY) = self.midpoint(top_left, bottom_left)
+            (trbrX, trbrY) = self.midpoint(top_right, bottom_right)
+
+            
+            # Use the same annotation method as ReferenceObject
+            self.annotate_dimensions(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
         # Show the result with all contours drawn
-        # plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        # plt.axis('off')
-        # plt.show()
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+        plt.show()
     
 
     def hsv_filter(image_clip, hue_min, hue_max):
@@ -239,7 +256,6 @@ class SnailObject(ImageRuler):
         # Convert RGB to HSV
         image_clip = cv2.convertScaleAbs(image_clip, alpha=1.2, beta=50)
         plt.imshow(cv2.cvtColor(image_clip, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
         plt.show()
         hsv_image = cv2.cvtColor(image_clip, cv2.COLOR_RGB2HSV).astype(np.float32)
         hsv_image[:, :, 0] /= 179.0  # Normalize hue to [0, 1]
@@ -286,17 +302,16 @@ if __name__ == "__main__":
     reference_length_mm = 10.42  # Set this to the real-world length of your reference object in mm
 
     # Reference object detection and annotation
-    # ref_obj = ReferenceObject(reference_length_mm=reference_length_mm)
-    # ref_obj.detect_and_annotate(image.copy())
+    ref_obj = ReferenceObject(reference_length_mm=reference_length_mm)
+    pixels_per_metric = ref_obj.detect_and_annotate(image.copy())
+
+    print(f"Pixels per metric: {pixels_per_metric}")
 
     # Snail object detection (example usage)
     snail_obj = SnailObject()
-    # edged = snail_obj.prep_image(image.copy())
-    # snail_obj.get_contours(edged, image.copy())
+    edged = snail_obj.prep_image(image.copy())
+    snail_obj.get_contours(edged, image.copy())
 
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    plt.axis('off')
-    plt.show()
 
-    image_color_filtered = SnailObject.hsv_filter(image, hue_min=0.05, hue_max=0.22)
+    # image_color_filtered = SnailObject.hsv_filter(image, hue_min=0.05, hue_max=0.22)
     # You can call snail_obj.get_contours(edged, image.copy()) to visualize snail contours
