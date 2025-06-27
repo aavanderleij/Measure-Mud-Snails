@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
 
         {
             "name": "Python Debugger: object size",
@@ -12,6 +13,16 @@
             "program": "${workspaceFolder}/src/object_size.py",
             "console": "integratedTerminal",
             "args": ["-i", "C:\\Users\\avanderleij\\OneDrive - NIOZ\\Afbeeldingen\\Snail_measure_test_2_ref_obj\\DSC_0272.JPG"]
-        }
+        },
+
+        {
+        "name": "Python Debugger: object size (with nef)",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/object_size.py",
+        "console": "integratedTerminal",
+        "args": ["-i", "C:\\Users\\avanderleij\\OneDrive - NIOZ\\Afbeeldingen\\Snail_measure_test_2_ref_obj\\DSC_0272.NEF"]
+    }
     ]
 }
+    

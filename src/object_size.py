@@ -1,3 +1,4 @@
+
 from scipy.spatial import distance
 from imutils import perspective
 from imutils import contours
@@ -55,6 +56,57 @@ class ImageRuler:
                     (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
     
+    @staticmethod
+    def get_min_area_rect_box(cnt):
+        """
+        Returns ordered box points for the minimum area rectangle of a contour.
+        """
+        rotated_rect = cv2.minAreaRect(cnt)
+        box_points = cv2.boxPoints(rotated_rect)
+        box_points = np.array(box_points, dtype="int")
+        box_points = perspective.order_points(box_points)
+        return box_points
+
+    def draw_midpoints_and_lines(self, image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
+        """
+        Draws midpoints and lines between midpoints on the image.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
+
+        Returns:
+            None
+        """
+        for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
+            cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
+        cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
+        cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
+
+    def process_rectangle_contour(self, cnt, image):
+        """
+        Shared logic for drawing, computing midpoints, and annotating dimensions for a rectangle contour.
+
+        Args:
+            cnt (numpy.ndarray): The contour of the rectangle.
+            image (numpy.ndarray): The image to annotate.
+
+        Returns:
+            None
+        """
+        box_points = self.get_min_area_rect_box(cnt)
+        cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+
+        (top_left, top_right, bottom_right, bottom_left) = box_points
+        (tltrX, tltrY) = self.midpoint(top_left, top_right)
+        (blbrX, blbrY) = self.midpoint(bottom_left, bottom_right)
+        (tlblX, tlblY) = self.midpoint(top_left, bottom_left)
+        (trbrX, trbrY) = self.midpoint(top_right, bottom_right)
+
+        self.draw_midpoints_and_lines(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+        self.annotate_dimensions(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+        return box_points 
+
 class ReferenceObject(ImageRuler):
     
     def __init__(self, reference_length_mm):
@@ -123,45 +175,7 @@ class ReferenceObject(ImageRuler):
         Returns:
             None
         """
-        # Get the minimum area rectangle and its box points
-        rotated_rect = cv2.minAreaRect(cnt)
-        box_points = cv2.boxPoints(rotated_rect)
-        box_points = np.array(box_points, dtype="int")
-        box_points = perspective.order_points(box_points)
-        # Draw the rectangle
-        cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
-
-        # Compute midpoints for dimension annotation
-        (top_left, top_right, bottom_right, bottom_left) = box_points
-        (tltrX, tltrY) = self.midpoint(top_left, top_right)
-        (blbrX, blbrY) = self.midpoint(bottom_left, bottom_right)
-        (tlblX, tlblY) = self.midpoint(top_left, bottom_left)
-        (trbrX, trbrY) = self.midpoint(top_right, bottom_right)
-
-        # Draw midpoints and lines
-        self.draw_midpoints_and_lines(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
-        # Annotate the measured dimensions
-        self.annotate_dimensions(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
-
-    def draw_midpoints_and_lines(self, image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
-        """
-        Draws midpoints and lines between midpoints on the image.
-
-        Args:
-            image (numpy.ndarray): The image to annotate.
-            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
-
-        Returns:
-            None
-        """
-        for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
-            cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
-        cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
-        cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
-
-    
-        
-
+        self.process_rectangle_contour(cnt, image)
 
     def detect_and_annotate(self, image):
         """
@@ -175,6 +189,7 @@ class ReferenceObject(ImageRuler):
         plt.axis('off')
         plt.show()
 
+
 class SnailObject(ImageRuler):
     """
     Class for detecting and measuring snail objects (or other objects of interest).
@@ -186,26 +201,31 @@ class SnailObject(ImageRuler):
         """
         Preprocess the input image by converting to grayscale, blurring, and performing edge detection.
         """
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # Blur to reduce noise
-        blured = cv2.GaussianBlur(gray, (7, 7), 0)
-        # Edge detection
-        edged = cv2.Canny(blured, 10, 40)
-        # Morphological operations to close gaps
+
+
+        # Bilateral filter
+        blured = cv2.bilateralFilter(image, d=6, sigmaColor=30, sigmaSpace=50)
+
+        # Canny edge detection
+        edged = cv2.Canny(blured, 5, 30)
+
+        # Morphological operations to clean up the edges
+        # dilate contours to close gaps
         edged = cv2.dilate(edged, None, iterations=2)
+        # erode to remove noise
         edged = cv2.erode(edged, None, iterations=1)
+
+
         # Show the blurred image for inspection
-        # plt.imshow(cv2.cvtColor(blured, cv2.COLOR_BGR2RGB))
-        # plt.axis('off')
-        # plt.show()
+        plt.imshow(cv2.cvtColor(blured, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+        plt.show()
         return edged
 
     def get_contours(self, edged, image):
         """
         Finds and draws contours on the image, highlighting each detected object.
         """
-        # Find contours
         cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
         (cnts, _) = imutils.contours.sort_contours(cnts)
@@ -214,77 +234,13 @@ class SnailObject(ImageRuler):
         for contour in cnts:
             if cv2.contourArea(contour) < 1000:
                 continue
-            # Draw contour
-            cv2.drawContours(image, [contour.astype("int")], -1, (0, 255, 0), 2)
-            # Get the minimum area rectangle and its box points
-            box = cv2.minAreaRect(contour)
-            box_points = cv2.boxPoints(box)
-            box_points = np.array(box_points, dtype="int")
-            box_points = perspective.order_points(box_points)
-            # Draw the rectangle and its corners
-            cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
-            for (x, y) in box_points:
-                cv2.circle(image, (int(x), int(y)), 5, (0, 0, 255), -1)
-            # Annotate dimensions (reuse from ReferenceObject)
-            (top_left, top_right, bottom_right, bottom_left) = box_points
-            (tltrX, tltrY) = self.midpoint(top_left, top_right)
-            (blbrX, blbrY) = self.midpoint(bottom_left, bottom_right)
-            (tlblX, tlblY) = self.midpoint(top_left, bottom_left)
-            (trbrX, trbrY) = self.midpoint(top_right, bottom_right)
-
-            
-            # Use the same annotation method as ReferenceObject
-            self.annotate_dimensions(image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
-        # Show the result with all contours drawn
+            self.process_rectangle_contour(contour, image)
         plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         plt.axis('off')
         plt.show()
     
 
-    def hsv_filter(image_clip, hue_min, hue_max):
-        """
-        Converts an RGB image to HSV, applies a hue threshold, and returns the color-filtered image.
-
-        Parameters:
-        - image_clip: np.ndarray, input RGB image
-        - hue_min: float, minimum hue threshold (0 to 1)
-        - hue_max: float, maximum hue threshold (0 to 1)
-
-        Returns:
-        - image_color_filtered: np.ndarray, filtered image with background removed
-        """
-        # Convert RGB to HSV
-        image_clip = cv2.convertScaleAbs(image_clip, alpha=1.2, beta=50)
-        plt.imshow(cv2.cvtColor(image_clip, cv2.COLOR_BGR2RGB))
-        plt.show()
-        hsv_image = cv2.cvtColor(image_clip, cv2.COLOR_RGB2HSV).astype(np.float32)
-        hsv_image[:, :, 0] /= 179.0  # Normalize hue to [0, 1]
-
-        # Define thresholds
-        channel1_min = hue_min
-        channel1_max = hue_max
-        channel2_min = 0.0
-        channel2_max = 1.0
-        channel3_min = 0.0
-        channel3_max = 1.0
-
-        # Create mask
-        mask = (
-            (hsv_image[:, :, 0] >= channel1_min) & (hsv_image[:, :, 0] <= channel1_max) &
-            (hsv_image[:, :, 1] >= channel2_min) & (hsv_image[:, :, 1] <= channel2_max) &
-            (hsv_image[:, :, 2] >= channel3_min) & (hsv_image[:, :, 2] <= channel3_max)
-        )
-
-        # Apply mask
-        image_color_filtered = np.copy(image_clip)
-        image_color_filtered[~mask] = 0
-
-        
-        plt.imshow(cv2.cvtColor(image_color_filtered, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
-
-        return image_color_filtered
+    
 
 def get_args():
     """
@@ -298,10 +254,10 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
+
+
     image = cv2.imread(args["image"])
     reference_length_mm = 10.42  # Set this to the real-world length of your reference object in mm
-
-    # Reference object detection and annotation
     ref_obj = ReferenceObject(reference_length_mm=reference_length_mm)
     pixels_per_metric = ref_obj.detect_and_annotate(image.copy())
 
