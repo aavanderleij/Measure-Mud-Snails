@@ -52,10 +52,15 @@ class ImageRuler:
         dA = distance.euclidean((tltrX, tltrY), (blbrX, blbrY))
         dB = distance.euclidean((tlblX, tlblY), (trbrX, trbrY))
         # Convert to real-world units using the reference length
-        pixels_per_metric = 78.63018599673104
+        if self.pixels_per_metric is None:
+            
+            raise ValueError("pixels_per_metric is not set. Please set it before calling annotate_dimensions.")
+            
+        print(f"Calculated pixels_per_metric: {self.pixels_per_metric}")
+        
         print(f"Distance A (pixels): {dA}, Distance B (pixels): {dB}")
-        dimA = dA / pixels_per_metric
-        dimB = dB / pixels_per_metric
+        dimA = dA / self.pixels_per_metric
+        dimB = dB / self.pixels_per_metric
         # Annotate the dimensions on the image
         cv2.putText(image, "{:.1f}mm".format(dimA),
                     (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
@@ -212,6 +217,39 @@ class ReferenceObject(ImageRuler):
         plt.axis('off')
         plt.show()
 
+    def calculate_pixels_per_metric(self, image):
+        """
+        Detects the reference rectangle and calculates pixels per metric (mm) using the smaller width.
+
+        Args:
+            image (numpy.ndarray): The input BGR image.
+
+        Returns:
+            float: The calculated pixels per metric (pixels per mm).
+        """
+        contours = self.set_red_squire_ref_object_mask(image)
+        # Find the largest rectangle contour
+        max_area = 0
+        best_cnt = None
+        for cnt in contours:
+            if self.is_reference_rectangle(cnt):
+                area = cv2.contourArea(cnt)
+                if area > max_area:
+                    max_area = area
+                    best_cnt = cnt
+        if best_cnt is None:
+            raise ValueError("No suitable reference rectangle found.")
+
+        box = self.get_min_area_rect_box(best_cnt)
+        (tl, tr, br, bl) = box
+        # Compute width and height in pixels
+        width = distance.euclidean(tl, tr)
+        height = distance.euclidean(tr, br)
+        # Use the smaller dimension as the reference width
+        ref_pixels = min(width, height)
+        self.pixels_per_metric = ref_pixels / self.reference_length_mm
+        return self.pixels_per_metric
+
 
 class SnailObject(ImageRuler):
     """
@@ -362,19 +400,24 @@ if __name__ == "__main__":
     args = get_args()
 
     image = cv2.imread(args["image"])
-    reference_length_mm = 10.42  # Set this to the real-world length of your reference object in mm
-    ref_obj = ReferenceObject(reference_length_mm=reference_length_mm)
-    pixels_per_metric = ref_obj.detect_and_annotate(image.copy())
+
+    # Set this to the real-world length of your reference object in mm
+    ref_obj = ReferenceObject(reference_length_mm=10.42)
+    pixels_per_metric = ref_obj.calculate_pixels_per_metric(image.copy())
 
     print(f"Pixels per metric: {pixels_per_metric}")
 
     # Snail object detection (example usage)
     snail_obj = SnailObject()
+    snail_obj.pixels_per_metric = pixels_per_metric
+
     # Get the petri dish mask
     petri_mask = snail_obj.clip_petri_dish(image.copy())
+
     # Apply the mask to the original image for contour detection
     masked_image = cv2.bitwise_and(image, image, mask=petri_mask if len(petri_mask.shape) == 2 else cv2.cvtColor(petri_mask, cv2.COLOR_BGR2GRAY))
     edged = snail_obj.prep_image(masked_image)
+    
     # Annotate contours on the original image (in-place)
     annotated_image = image.copy()
     snail_obj.get_contours(edged, annotated_image)
