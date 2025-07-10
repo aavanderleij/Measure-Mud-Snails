@@ -110,7 +110,7 @@ class SnailObject(ImageRuler):
             # If no circle found, return original image
             return image
 
-    def get_contours(self, edged, image):
+    def get_snail_contours(self, edged, image):
         """
         Finds and draws contours on the image, highlighting each detected object.
 
@@ -122,22 +122,35 @@ class SnailObject(ImageRuler):
             None
         """
         
-        #TODO this just draws contours, doest get anything
-        # Find contours in the edged image
-        cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-
-        # sort contours from left to right
-        (cnts, _) = imutils.contours.sort_contours(cnts)
+        cnts = self.get_contours(edged)
 
         #TODO seperate method for drawing contours
         # draw all contours on the image
         cv2.drawContours(image, cnts, -1, (0, 255, 0), 2)
-        print(f"Found {len(cnts)} contours in the image.")
         print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 1000)}")
         for contour in cnts:
+            # Skip small contours
             if cv2.contourArea(contour) < 1000:
                 continue
-            self.draw_rectangle_contour(contour, image)
+
+            else:
+                box_points = self.get_min_area_rect_box(contour)
+                # get mesurements in mm
+                dimA, dimB = self.get_dimensions_in_mm(box_points)
+                print(f"Dimension A (mm): {dimA}, Dimension B (mm): {dimB}")
+
+
+                # TODO logic wrong place
+                # Filter out measurements where either dimension is < 1 mm or > 10 mm
+                if dimA < 1 or dimB < 1 or dimA > 10 or dimB > 10:
+                    print("One of the dimensions is outside the valid range (1mm - 10mm). Skipping annotation.")
+                    continue
+                else:
+                    # draw rectangle contour
+                    cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+                    # draw midpoints and lines
+                    image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
+                    # Annotate the dimensions on the image
+                    self.annotate_dimensions(image, dimA, dimB, tltrX, tltrY, trbrX, trbrY)
 
         self.show_image(image, title="Detected Contours")
