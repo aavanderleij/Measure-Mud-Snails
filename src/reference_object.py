@@ -17,6 +17,7 @@ class ReferenceObject(ImageRuler):
             None
         """
         super().__init__()
+        # Initialize the reference length in mm
         self.reference_length_mm = reference_length_mm
           
 
@@ -39,9 +40,11 @@ class ReferenceObject(ImageRuler):
         mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
         mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
         mask = cv2.bitwise_or(mask1, mask2)
+
         # Morphological operations to clean up the mask
         mask = cv2.dilate(mask, None, iterations=2)
         mask = cv2.erode(mask, None, iterations=2)
+        
         # Find contours in the mask
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
@@ -75,7 +78,7 @@ class ReferenceObject(ImageRuler):
         Returns:
             None
         """
-        self.process_rectangle_contour(cnt, image)
+        self.draw_rectangle_contour(cnt, image)
 
     def detect_and_annotate(self, image):
         """
@@ -91,9 +94,8 @@ class ReferenceObject(ImageRuler):
         for cnt in contours:
             if self.is_reference_rectangle(cnt):
                 self.process_reference_rectangle(cnt, image)
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
+
+        self.show_image(image, title="Detected Reference Rectangle")
 
     def calculate_pixels_per_metric(self, image):
         """

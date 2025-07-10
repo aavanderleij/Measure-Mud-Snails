@@ -1,4 +1,5 @@
 import cv2
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy.spatial import distance
 from imutils import perspective
@@ -71,10 +72,10 @@ class ImageRuler:
 
         # TODO should be in a separate method
         # Annotate the dimensions on the image
-        cv2.putText(image, "{:.1f}mm".format(dimA),
+        cv2.putText(image, "{:.1f}mm".format(dimB),
                     (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
-        cv2.putText(image, "{:.1f}mm".format(dimB),
+        cv2.putText(image, "{:.1f}mm".format(dimA),
                     (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
     
@@ -97,6 +98,22 @@ class ImageRuler:
         box_points = perspective.order_points(box_points)
         return box_points
 
+    def show_image(self, image, title="Image"):
+        """
+        Displays the image using matplotlib.
+
+        Args:
+            image (numpy.ndarray): The image to display.
+            title (str): The title of the image window.
+
+        Returns:
+            None
+        """
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+        plt.title(title)
+        plt.show()
+
     def draw_midpoints_and_lines(self, image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
         """
         Draws midpoints and lines between midpoints on the image.
@@ -115,7 +132,7 @@ class ImageRuler:
         cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
         cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
 
-    def process_rectangle_contour(self, cnt, image):
+    def draw_rectangle_contour(self, cnt, image):
         """
         Shared logic for drawing, computing midpoints, and annotating dimensions for a rectangle contour.
 

@@ -14,18 +14,13 @@ class SnailObject(ImageRuler):
         """
         Initializes the SnailObject class for detecting and measuring snail objects.
 
-        Args:
-            None
-
-        Returns:
-            None
         """
         # call the parent constructor
         super().__init__()
 
     def prep_image(self, image):
         """
-        Preprocesses the input image by converting to grayscale, blurring, and performing edge detection.
+        Preprocesses the input image by converting to grayscale, bilateral filtering, and performing edge detection.
 
         Args:
             image (numpy.ndarray): The input BGR image.
@@ -46,10 +41,10 @@ class SnailObject(ImageRuler):
         edged = cv2.erode(edged, None, iterations=1)
 
         # Show the blurred image for inspection
-        plt.imshow(cv2.cvtColor(blured, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
+        self.show_image(blured, title="Blurred Image")
         return edged
+    
+    
     
     def clip_petri_dish(self, image):
         """
@@ -63,43 +58,53 @@ class SnailObject(ImageRuler):
         """
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
         # Blur to reduce noise
         blurred = cv2.GaussianBlur(gray, (15, 15), 0)
+
         # Detect circles using Hough Transform
         circles = cv2.HoughCircles(
             blurred, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
             param1=50, param2=30, minRadius=100, maxRadius=0
         )
         if circles is not None:
+            
             circles = np.round(circles[0, :]).astype("int")
+
             # Draw all detected circles for inspection
             output = image.copy()
             for (x, y, r) in circles:
                 cv2.circle(output, (x, y), r, (0, 255, 0), 2)
                 cv2.circle(output, (x, y), 2, (0, 0, 255), 3)
-            plt.imshow(cv2.cvtColor(output, cv2.COLOR_BGR2RGB))
-            plt.axis('off')
-            plt.title("Detected Circles")
-            plt.show()
+
+            # Show the output with detected circles
+            self.show_image(output, title="Detected Circles")
+
             # Sort circles by radius, descending
             circles_sorted = sorted(circles, key=lambda c: c[2], reverse=True)
+
             # Use the second largest circle if available, otherwise fallback to the largest
+            # sencond largest circle is likely the inside rim of the petri dish
             if len(circles_sorted) > 1:
                 x, y, r = circles_sorted[1]
             else:
                 x, y, r = circles_sorted[0]
+            
+
             # Create a mask
             mask = np.zeros_like(gray)
             cv2.circle(mask, (x, y), r, 255, -1)
+
             # Apply mask to image
             masked = cv2.bitwise_and(image, image, mask=mask)
+
             # Crop to bounding box
             x1, y1, x2, y2 = x - r, y - r, x + r, y + r
             clipped = masked[max(y1,0):y2, max(x1,0):x2]
 
-            plt.imshow(cv2.cvtColor(clipped, cv2.COLOR_BGR2RGB))
-            plt.axis('off')
-            plt.show()
+            # Show the clipped image
+            self.show_image(clipped, title="Clipped Petri Dish")
+            
             return mask
         else:
             # If no circle found, return original image
@@ -117,18 +122,22 @@ class SnailObject(ImageRuler):
             None
         """
         
+        #TODO this just draws contours, doest get anything
         # Find contours in the edged image
         cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
+
+        # sort contours from left to right
         (cnts, _) = imutils.contours.sort_contours(cnts)
+
+        #TODO seperate method for drawing contours
+        # draw all contours on the image
         cv2.drawContours(image, cnts, -1, (0, 255, 0), 2)
         print(f"Found {len(cnts)} contours in the image.")
         print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 1000)}")
         for contour in cnts:
             if cv2.contourArea(contour) < 1000:
                 continue
-            self.process_rectangle_contour(contour, image)
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
-    
+            self.draw_rectangle_contour(contour, image)
+
+        self.show_image(image, title="Detected Contours")
