@@ -77,7 +77,6 @@ class ImageRuler:
         """
         
 
-        # TODO should be in a separate method
         # Annotate the dimensions on the image
         cv2.putText(image, "{:.1f}mm".format(dimA),
                     (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
