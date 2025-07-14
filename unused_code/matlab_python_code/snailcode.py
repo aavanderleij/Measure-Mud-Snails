@@ -19,7 +19,6 @@ def get_all_files(dir_name):
     Returns:
     - file_list: list of str, a list containing the full paths of all files in the directory.
     """
-    #TODO find a more efficient way to get all files
     file_list = []
     for root, _, files in os.walk(dir_name):
         for file in files:

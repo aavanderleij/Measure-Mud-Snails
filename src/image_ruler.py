@@ -64,18 +64,18 @@ class ImageRuler:
         
         return dimA, dimB
     
-    def annotate_dimensions(self, image, dimA, dimB, tltrX, tltrY, trbrX, trbrY):
+    def annotate_dimensions(self, image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
         """
         Annotates the image with the measured dimensions of the detected rectangle.
 
         Args:
             image (numpy.ndarray): The image to annotate.
+            name (str): The label to annotate on the left side of the rectangle.
             tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
 
         Returns:
             None
         """
-        
 
         # Annotate the dimensions on the image
         cv2.putText(image, "{:.1f}mm".format(dimA),
@@ -83,6 +83,10 @@ class ImageRuler:
                     3, (0, 255, 255), 3)
         cv2.putText(image, "{:.1f}mm".format(dimB),
                     (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (0, 255, 255), 3)
+        # Annotate the name on the left side of the rectangle
+        cv2.putText(image, name,
+                    (int(tlblX - 80), int(tlblY)), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
     
     @staticmethod

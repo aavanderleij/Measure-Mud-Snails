@@ -17,12 +17,12 @@
         },
 
         {
-        "name": "Python Debugger: object size (with nef)",
+        "name": "Python Debugger: measure object size (with nef)",
         "type": "debugpy",
         "request": "launch",
-        "program": "${workspaceFolder}/src/object_size.py",
+        "program": "${workspaceFolder}/main.py",
         "console": "integratedTerminal",
-        "args": ["-i", "C:\\Users\\avanderleij\\OneDrive - NIOZ\\Afbeeldingen\\Snail_measure_test_2_ref_obj\\DSC_0272.NEF"]
+        "args": ["-i", "C:\\Users\\avanderleij\\OneDrive - NIOZ\\Afbeeldingen\\Snail_measure_test_3_light_pad\\DSC_0274.JPG"]
     }
     ]
 }

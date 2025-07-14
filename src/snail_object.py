@@ -1,3 +1,4 @@
+import csv
 import cv2
 import imutils
 from imutils import perspective
@@ -55,6 +56,7 @@ class SnailObject(ImageRuler):
 
         Returns:
             numpy.ndarray: The clipped image containing only the petri dish.
+            If no circle is found, returns the original image.
         """
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -64,8 +66,8 @@ class SnailObject(ImageRuler):
 
         # Detect circles using Hough Transform
         circles = cv2.HoughCircles(
-            blurred, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
-            param1=50, param2=30, minRadius=100, maxRadius=0
+            blurred, cv2.HOUGH_GRADIENT, dp=1.2, minDist=200,
+            param1=100, param2=80, minRadius=150, maxRadius=0
         )
         if circles is not None:
             
@@ -84,7 +86,7 @@ class SnailObject(ImageRuler):
             circles_sorted = sorted(circles, key=lambda c: c[2], reverse=True)
 
             # Use the second largest circle if available, otherwise fallback to the largest
-            # sencond largest circle is likely the inside rim of the petri dish
+            # second largest circle is likely the inside rim of the petri dish
             if len(circles_sorted) > 1:
                 x, y, r = circles_sorted[1]
             else:
@@ -109,6 +111,20 @@ class SnailObject(ImageRuler):
         else:
             # If no circle found, return original image
             return image
+    
+    def write_snail_to_csv(self, name, length, width, filename="snail_measurements.csv"):
+        """
+        Writes the snail's name, length, and width to a CSV file.
+
+        Args:
+            name (str): Snail identifier.
+            length (float): Length in mm.
+            width (float): Width in mm.
+            filename (str): CSV file name.
+        """
+        with open(filename, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([name, length, width])
 
     def get_snail_contours(self, edged, image):
         """
@@ -124,10 +140,12 @@ class SnailObject(ImageRuler):
         
         cnts = self.get_contours(edged)
 
-        #TODO seperate method for drawing contours
         # draw all contours on the image
         cv2.drawContours(image, cnts, -1, (0, 255, 0), 2)
         print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 1000)}")
+
+        # set ID for the contour
+        snail_ID = 1
         for contour in cnts:
             # Skip small contours
             if cv2.contourArea(contour) < 1000:
@@ -139,18 +157,22 @@ class SnailObject(ImageRuler):
                 dimA, dimB = self.get_dimensions_in_mm(box_points)
                 print(f"Dimension A (mm): {dimA}, Dimension B (mm): {dimB}")
 
-
-                # TODO logic wrong place
                 # Filter out measurements where either dimension is < 1 mm or > 10 mm
                 if dimA < 1 or dimB < 1 or dimA > 10 or dimB > 10:
                     print("One of the dimensions is outside the valid range (1mm - 10mm). Skipping annotation.")
                     continue
                 else:
+                   
+                    name = f"S{snail_ID}"
                     # draw rectangle contour
                     cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
                     # draw midpoints and lines
                     image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
                     # Annotate the dimensions on the image
-                    self.annotate_dimensions(image, dimA, dimB, tltrX, tltrY, trbrX, trbrY)
+                    self.annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+                    # add the id to the countour
+                    snail_ID += 1
+                    # write the snail measurements to csv
+                    self.write_snail_to_csv(name, dimA, dimB)
 
         self.show_image(image, title="Detected Contours")

@@ -1,13 +1,16 @@
 from src.reference_object import ReferenceObject
 from src.snail_object import SnailObject
-from src.utils import get_args
+from src.utils import get_args, get_input_img
 import cv2
 import matplotlib.pyplot as plt
 
 def main():
     # Parse command line arguments
+    
     args = get_args()
-    image = cv2.imread(args["image"])
+
+    # image = cv2.imread(args["image"])
+    image = get_input_img(args["image"])
 
     # Create a ReferenceObject instance and calculate pixels per metric
     ref_obj = ReferenceObject(reference_length_mm=10.42)
