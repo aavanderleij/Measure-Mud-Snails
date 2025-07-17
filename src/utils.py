@@ -8,6 +8,12 @@ def get_args():
     import argparse
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-i", "--image", required=True, help="path to the input image")
+    argparser.add_argument("-r", "--reference_length_mm", type=float, default=10.42, help="length of the reference object in mm")
+    argparser.add_argument("-o", "--output", type=str, default="output.csv", help="path to save the output files")
+    argparser.add_argument("-k", "--pos_key", type=int, default=0, help="position key for the snail measurements")
+    argparser.add_argument("-sub", "--subsample", type=int, default=1, help="subsample factor for the image")
+    argparser.add_argument("--round", type=bool, default=False, help="whether to round the measurements")
+
     args = vars(argparser.parse_args())
     return args
 
