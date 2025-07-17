@@ -87,7 +87,7 @@ class ImageRuler:
         # Annotate the name on the left side of the rectangle
         cv2.putText(image, name,
                     (int(tlblX - 80), int(tlblY)), cv2.FONT_HERSHEY_SIMPLEX,
-                    3, (0, 255, 255), 3)
+                    3, (255, 0, 0), 3)
     
     @staticmethod
     def get_min_area_rect_box(cnt):
