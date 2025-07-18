@@ -32,7 +32,11 @@ def main():
     edged = snail_obj.prep_image(image)
     
     annotated_image = image.copy()
-    snail_obj.get_snail_contours(edged, annotated_image, args["pos_key"])
+    snails = snail_obj.get_snail_contours(edged, annotated_image, args["pos_key"])
+
+    print("Detected snails:")
+    for snail_id, snail in snails.items():
+        print(f"ID: {snail_id}, Length: {snail.length:.2f} mm, Width: {snail.width:.2f} mm")
 
     # mask = snail_obj.prep_image(image)
     # separated_mask = snail_obj.separate_touching_snails(mask)

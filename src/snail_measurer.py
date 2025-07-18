@@ -6,6 +6,7 @@ from imutils import contours
 from matplotlib import pyplot as plt
 import numpy as np
 from .image_ruler import ImageRuler
+from .snail_object import SnailObject
 import os
 
 class SnailMeasurer(ImageRuler):
@@ -181,7 +182,47 @@ class SnailMeasurer(ImageRuler):
             print("No circles found in the image.")
             # If no circle found, return original image
             return image
+
     
+    def separate_touching_snails(self, mask):
+        """
+        Separates touching snails using distance transform and watershed.
+        Args:
+            mask (numpy.ndarray): Binary mask of snails (white=snail, black=background).
+        Returns:
+            numpy.ndarray: Mask with separated snails.
+        """
+        # Step 1: Noise removal (optional, but helps)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
+
+        # Step 2: Sure background area
+        sure_bg = cv2.dilate(opening, kernel, iterations=3)
+
+        # Step 3: Sure foreground area (snail centers)
+        dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+        ret, sure_fg = cv2.threshold(dist_transform, 0.4 * dist_transform.max(), 255, 0)
+        sure_fg = np.uint8(sure_fg)
+
+        # Step 4: Unknown region
+        unknown = cv2.subtract(sure_bg, sure_fg)
+
+        # Step 5: Marker labelling
+        ret, markers = cv2.connectedComponents(sure_fg)
+        markers = markers + 1
+        markers[unknown == 255] = 0
+
+        # Step 6: Watershed
+        mask_color = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        cv2.watershed(mask_color, markers)
+
+        # Step 7: Create separated mask
+        separated = np.zeros_like(mask)
+        separated[markers > 1] = 255
+
+        self.show_image(separated, title="Separated Snails")
+        return separated
+
     def write_snail_to_csv(self, name, length, width, pos_key, filename="snail_measurements.csv"):
         """
         Writes the snail's name, length, and width to a CSV file.
@@ -230,11 +271,9 @@ class SnailMeasurer(ImageRuler):
                 box_points = self.get_min_area_rect_box(contour)
                 # get mesurements in mm
                 dimA, dimB = self.get_dimensions_in_mm(box_points)
-                print(f"Dimension A (mm): {dimA}, Dimension B (mm): {dimB}")
 
                 # Filter out measurements where either dimension is < 1 mm or > 10 mm
                 if dimA < 1 or dimB < 1 or dimA > 10 or dimB > 10:
-                    print("One of the dimensions is outside the valid range (1mm - 10mm). Skipping annotation.")
                     continue
 
                 else:
@@ -255,9 +294,19 @@ class SnailMeasurer(ImageRuler):
                         length, width = dimB, dimA
                     self.write_snail_to_csv(name, length, width, pos_key)
 
-                    snails[name] = (length, width)
+                    snail = SnailObject(
+                        snail_id=name,
+                        length=length,
+                        width=width,
+                        contour=contour,
+                        bounding_box=box_points
+                    )
+
+                    snails[name] = snail
+                    snail_ID += 1
 
         self.show_image(image, title="Detected Contours")
+        return snails
 
 
 # import cv2
