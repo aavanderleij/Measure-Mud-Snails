@@ -5,8 +5,8 @@ from imutils import perspective
 from imutils import contours
 from matplotlib import pyplot as plt
 import numpy as np
-from .image_ruler import ImageRuler
-from .snail_object import SnailObject
+from src.image_ruler import ImageRuler
+from src.snail_object import SnailObject
 import os
 
 class SnailMeasurer(ImageRuler):
