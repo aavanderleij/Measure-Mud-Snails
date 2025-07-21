@@ -92,8 +92,8 @@ def process_snails():
     processed_label.image = img_tk
 
 # Add buttons
-show_img_btn = ttk.Button(left_frame, text="Show Image", command=show_image)
-show_img_btn.pack(pady=10)
+select_img_btn = ttk.Button(left_frame, text="Select Image", command=show_image)
+select_img_btn.pack(pady=10)
 
 process_btn = ttk.Button(left_frame, text="Find Snails", command=process_snails)
 process_btn.pack(pady=10)
