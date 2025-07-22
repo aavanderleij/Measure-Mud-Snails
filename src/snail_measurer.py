@@ -307,6 +307,29 @@ class SnailMeasurer(ImageRuler):
 
         self.show_image(image, title="Detected Contours")
         return snails
+    
+    def draw_single_snail(self, image, snail):
+        """
+        Draws a single snail's contour and dimensions on the image.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            snail (SnailObject): The snail object containing its details.
+
+        Returns:
+            numpy.ndarray: The annotated image.
+        """
+        box_points = snail.bounding_box
+        dimA, dimB = self.get_dimensions_in_mm(box_points)
+
+        # Draw rectangle contour
+        cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+        # Draw midpoints and lines
+        image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
+        # Annotate the dimensions on the image
+        self.annotate_dimensions(image, snail.snail_id, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+
+        return image
 
 
 # import cv2
