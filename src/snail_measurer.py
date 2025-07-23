@@ -71,7 +71,7 @@ class SnailMeasurer(ImageRuler):
         combined = cv2.dilate(combined, None, iterations=2)
         combined = cv2.erode(combined, None, iterations=1)
 
-        self.show_image(combined, title="Combined Snail Edges")
+        # self.show_image(combined, title="Combined Snail Edges")
         return combined
     
     def separate_touching_snails(self, mask):
@@ -223,7 +223,7 @@ class SnailMeasurer(ImageRuler):
         self.show_image(separated, title="Separated Snails")
         return separated
 
-    def write_snail_to_csv(self, name, length, width, pos_key, filename="snail_measurements.csv"):
+    def write_snail_to_csv(self, snail_obj, filename="snail_measurements.csv"):
         """
         Writes the snail's name, length, and width to a CSV file.
         #TODO discuss if we want a mega file with all measurements of separate csv per image
@@ -234,14 +234,17 @@ class SnailMeasurer(ImageRuler):
             width (float): Width in mm.
             filename (str): CSV file name.
         """
+        #TODO check if snail is already in the file, if so, update the measurements
+
+
         file_exists = os.path.isfile(filename)
         with open(filename, mode='a', newline='') as file:
             writer = csv.writer(file)
             if not file_exists:
                 writer.writerow(["Name", "PosKey", "Length (mm)", "Width (mm)"])
-            writer.writerow([name, pos_key, length, width])
+            writer.writerow([snail_obj.snail_id, snail_obj.pos_key, snail_obj.length, snail_obj.width])
 
-    def get_snail_contours(self, edged, image, pos_key):
+    def get_snail_contours(self, edged, image, draw_contours_all=True, draw_measurements=True, draw_bounding_box=True):
         """
         Finds and draws contours on the image, highlighting each detected object.
 
@@ -255,8 +258,11 @@ class SnailMeasurer(ImageRuler):
         
         cnts = self.get_contours(edged)
 
+        #TODO split function into separate functions
+
         # draw all contours on the image
-        cv2.drawContours(image, cnts, -1, (0, 255, 0), 2)
+        if draw_contours_all:
+            cv2.drawContours(image, cnts, -1, (0, 255, 0), 2)
         print(f"Number of contours with area > 1000: {sum(1 for contour in cnts if cv2.contourArea(contour) > 1000)}")
 
         # set ID for the contour
@@ -279,11 +285,13 @@ class SnailMeasurer(ImageRuler):
                 else:
                     name = f"S{snail_ID}"
                     # draw rectangle contour
-                    cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+                    if draw_bounding_box:
+                        cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
                     # draw midpoints and lines
                     image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
                     # Annotate the dimensions on the image
-                    self.annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+                    if draw_measurements:
+                        self.annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
                     # add the id to the countour
                     
                     # write the snail measurements to csv
@@ -292,7 +300,6 @@ class SnailMeasurer(ImageRuler):
                         length, width = dimA, dimB
                     else:
                         length, width = dimB, dimA
-                    self.write_snail_to_csv(name, length, width, pos_key)
 
                     snail = SnailObject(
                         snail_id=name,
@@ -305,7 +312,8 @@ class SnailMeasurer(ImageRuler):
                     snails[name] = snail
                     snail_ID += 1
 
-        self.show_image(image, title="Detected Contours")
+        #TODO make optional
+        # self.show_image(image, title="Detected Contours")
         return snails
     
     def draw_single_snail(self, image, snail):
