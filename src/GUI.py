@@ -1,198 +1,209 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
-#TODO fix import error !!!!!
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
 
-# Create main window
-root = tk.Tk()
-root.title("Snail Measurement GUI")
-root.geometry("1000x700")
-root.configure(bg="#d0e7f9")
+class SnailGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Snail Measurement GUI")
+        self.root.geometry("1000x700")
+        self.root.configure(bg="#d0e7f9")
 
-# Left panel
-left_frame = ttk.Frame(root, width=250)
-left_frame.pack(side="left", fill="y", padx=10, pady=10)
-
-# Original Image section
-original_image_frame = ttk.LabelFrame(left_frame, text="Image Sample", width=250, height=150)
-original_image_frame.pack(fill="x", pady=10)
-image_label = tk.Label(original_image_frame, text="original image")
-image_label.pack(expand=True)
-
-# Tools/Filters section
-tools_frame = ttk.LabelFrame(left_frame, text="Select between various tools or filters", width=250, height=200)
-tools_frame.pack(fill="x", pady=10)
-#TODO add find contours button
-#TODO add inspect individual snail button 
-#TODO add toggle annotations (show/hide: ID, length, width)
+        self.original_loaded_image = None
+        self.detected_snails = {}
+        self.snail_obj = None
+        self.current_snail_idx = tk.IntVar(value=0)
+        self.reference_obj_width_mm = 10.42
 
 
-# Right panel for processed image
-right_frame = ttk.LabelFrame(root, text="Processed Image")
-right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
-processed_label = tk.Label(right_frame, text="Processed image")
-processed_label.pack(expand=True)
+        self.setup_layout()
 
-# Store loaded image globally
-loaded_image = None
-# Store detected snails globally
-detected_snails = {}
-# Store snail object globally
-snail_obj = None
-current_snail_idx = tk.IntVar(value=0)
+    def setup_layout(self):
+        """"
+        Sets up the GUI layout with left and right panels, image display, and navigation controls.
+        """
+        # Left panel
+        self.left_frame = ttk.Frame(self.root, width=250)
+        self.left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
-def show_image():
-    global loaded_image
-    file_path = filedialog.askopenfilename(
-        title="Select Image",
-        filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp *.gif")]
-    )
-    if file_path:
-        try:
-            img = Image.open(file_path)
-            loaded_image = cv2.imread(file_path)
-            
-            img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
-            img_tk = ImageTk.PhotoImage(img)
-            image_label.config(image=img_tk, text="")
-            image_label.image = img_tk
-        except Exception as e:
-            from tkinter import messagebox
-            messagebox.showerror("Error", f"Failed to open image:\n{e}")
+        # Original Image section
+        self.original_image_frame = ttk.LabelFrame(self.left_frame, text="Image Sample", width=250, height=150)
+        self.original_image_frame.pack(fill="x", pady=10)
+        self.image_label = tk.Label(self.original_image_frame, text="original image")
+        self.image_label.pack(expand=True)
 
-def process_snails():
-    global loaded_image, snail_obj, detected_snails
-    if loaded_image is None:
-        from tkinter import messagebox
-        messagebox.showerror("Error", "No image loaded!")
-        return
-    
-    # Create a ReferenceObject instance and calculate pixels per metric
-    ref_obj = ReferenceObject(reference_length_mm=10.42)
-    pixels_per_metric = ref_obj.calculate_pixels_per_metric(loaded_image.copy())
+        # Tools/Filters section
+        self.tools_frame = ttk.LabelFrame(self.left_frame, text="Select between various tools or filters", width=250, height=200)
+        self.tools_frame.pack(fill="x", pady=10)
 
-    # Run snail detection
-    snail_obj = SnailMeasurer()
-    snail_obj.pixels_per_metric = pixels_per_metric
+        # Right panel for processed image
+        self.right_frame = ttk.LabelFrame(self.root, text="Processed Image")
+        self.right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
+        self.processed_label = tk.Label(self.right_frame, text="Processed image")
+        self.processed_label.pack(expand=True)
 
-    edged = snail_obj.prep_image(loaded_image)
-    annotated_image = loaded_image.copy()
-    detected_snails = snail_obj.get_snail_contours(edged, annotated_image, pos_key="GUI")
+        # Navigation interface
+        self.nav_frame = ttk.Frame(self.right_frame)
+        self.nav_frame.pack(side="bottom", pady=10)
 
-    # Display all snails
-    annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-    img_pil = Image.fromarray(annotated_image_rgb)
-    img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img_pil)
-    processed_label.config(image=img_tk, text="")
-    processed_label.image = img_tk
+        self.prev_btn = ttk.Button(self.nav_frame, text="<-", width=3, command=self.prev_snail)
+        self.prev_btn.pack(side="left")
 
+        self.snail_id_entry = tk.Entry(self.nav_frame, width=5, justify="center")
+        self.snail_id_entry.pack(side="left", padx=2)
 
-def draw_single_snail(snail):
-    """
-    Draws a single snail's contour and bounding box on the processed image.
-    
-    Args:
-        snail (SnailObject): The snail object to draw.
-    """
-    annotated_image = loaded_image.copy()
-    annotated_image = snail_obj.draw_single_snail(annotated_image, snail)
-    
-    # Convert to PIL Image for Tkinter
-    annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-    img_pil = Image.fromarray(annotated_image_rgb)
-    img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img_pil)
-    
-    processed_label.config(image=img_tk, text="")
-    processed_label.image = img_tk
+        self.next_btn = ttk.Button(self.nav_frame, text="->", width=3, command=self.next_snail)
+        self.next_btn.pack(side="left")
 
-def view_single_snail():
-    global detected_snails
-    if not detected_snails:
-        from tkinter import messagebox
-        messagebox.showerror("Error", "No snails detected! Run 'Find Snails' first.")
-        return
-    # Show the first snail (or change to select another)
-    first_snail = list(detected_snails.values())[0]
-    draw_single_snail(first_snail)
+        self.goto_btn = ttk.Button(self.nav_frame, text="Go", width=3, command=self.goto_snail)
+        self.goto_btn.pack(side="left", padx=2)
 
-def update_snail_display():
-    global detected_snails
-    snail_keys = list(detected_snails.keys())
-    if not snail_keys:
-        from tkinter import messagebox
-        messagebox.showerror("Error", "No snails detected! Run 'Find Snails' first.")
-        return
-    idx = current_snail_idx.get()
-    if idx < 0: idx = 0
-    if idx >= len(snail_keys): idx = len(snail_keys) - 1
-    current_snail_idx.set(idx)
-    snail = detected_snails[snail_keys[idx]]
-    draw_single_snail(snail)
-    snail_id_entry.delete(0, tk.END)
-    snail_id_entry.insert(0, str(snail_keys[idx]))
+        # Add buttons
+        self.select_img_btn = ttk.Button(self.left_frame, text="Select Image", command=self.select_image)
+        self.select_img_btn.pack(pady=10)
 
-def prev_snail():
-    if detected_snails:
-        current_snail_idx.set(max(0, current_snail_idx.get() - 1))
-        update_snail_display()
+        self.process_btn = ttk.Button(self.left_frame, text="Find Snails", command=self.measure_snails)
+        self.process_btn.pack(pady=10)
 
-def next_snail():
-    if detected_snails:
-        current_snail_idx.set(min(len(detected_snails) - 1, current_snail_idx.get() + 1))
-        update_snail_display()
+        self.view_snail_btn = ttk.Button(self.left_frame, text="View Single Snail", command=self.view_single_snail)
+        self.view_snail_btn.pack(pady=10)
 
-def goto_snail():
-    if detected_snails:
-        snail_keys = list(detected_snails.keys())
-        val = snail_id_entry.get()
-        # Try to match by index first, then by snail_id
-        try:
-            idx = int(val)
-            if 0 <= idx < len(snail_keys):
-                current_snail_idx.set(idx)
-                update_snail_display()
-                return
-        except ValueError:
-            pass
-        # Try to match by snail_id
-        if val in snail_keys:
-            idx = snail_keys.index(val)
-            current_snail_idx.set(idx)
-            update_snail_display()
-        else:
-            from tkinter import messagebox
-            messagebox.showerror("Error", f"Snail '{val}' not found.")
+    def select_image(self):
+        """
+        Opens a file dialog to select an image and displays it in the GUI in the original image frame.
+        """
+        file_path = filedialog.askopenfilename(
+            title="Select Image",
+            filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp *.gif")]
+        )
 
-# --- Snail navigation interface ---
-nav_frame = ttk.Frame(right_frame)
-nav_frame.pack(side="bottom",pady=10)
+        if file_path:
+            try:
+                img = Image.open(file_path)
+                # set original_loaded_image to the full unedited resolution image
+                self.original_loaded_image = cv2.imread(file_path)
+                img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
+                img_tk = ImageTk.PhotoImage(img)
+                self.image_label.config(image=img_tk, text="")
+                self.image_label.image = img_tk
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open image:\n{e}")
 
-prev_btn = ttk.Button(nav_frame, text="<-", width=3, command=prev_snail)
-prev_btn.pack(side="left")
+    def measure_snails(self):
+        """
+        Processes the loaded image to detect snails and display the results in the processed image frame.
+        """
+        if self.original_loaded_image is None:
+            messagebox.showerror("Error", "No image loaded!")
+            return
 
-snail_id_entry = tk.Entry(nav_frame, width=5, justify="center")
-snail_id_entry.pack(side="left", padx=2)
+        # Calculate pixels per metric using the reference object
+        #TODO show check to user if the reference object is correct
+        #TODO check if this should be done here or in the SnailMeasurer class
+        ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_width_mm)
+        pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
-next_btn = ttk.Button(nav_frame, text="->", width=3, command=next_snail)
-next_btn.pack(side="left")
+        self.snail_obj = SnailMeasurer()
+        self.snail_obj.pixels_per_metric = pixels_per_metric
 
-goto_btn = ttk.Button(nav_frame, text="Go", width=3, command=goto_snail)
-goto_btn.pack(side="left", padx=2)
+        edged = self.snail_obj.prep_image(self.original_loaded_image)
+        annotated_image = self.original_loaded_image.copy()
+        self.detected_snails = self.snail_obj.get_snail_contours(edged, annotated_image, pos_key="GUI")
 
-# Add buttons
-select_img_btn = ttk.Button(left_frame, text="Select Image", command=show_image)
-select_img_btn.pack(pady=10)
+        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(annotated_image_rgb)
+        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        img_tk = ImageTk.PhotoImage(img_pil)
+        self.processed_label.config(image=img_tk, text="")
+        self.processed_label.image = img_tk
 
-process_btn = ttk.Button(left_frame, text="Find Snails", command=process_snails)
-process_btn.pack(pady=10)
+    def draw_single_snail(self, snail):
+        """
+        Draws a single snail on the processed image and updates the display.
+        Args:
+            snail (SnailObject): The snail object to draw.
+        """
+        annotated_image = self.original_loaded_image.copy()
+        annotated_image = self.snail_obj.draw_single_snail(annotated_image, snail)
+        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(annotated_image_rgb)
+        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        img_tk = ImageTk.PhotoImage(img_pil)
+        self.processed_label.config(image=img_tk, text="")
+        self.processed_label.image = img_tk
 
-view_snail_btn = ttk.Button(left_frame, text="View Single Snail", command=view_single_snail)
-view_snail_btn.pack(pady=10)
+    def view_single_snail(self):
+        """
+        Displays the first detected snail in the processed image frame.
+        """
+        if not self.detected_snails:
+            messagebox.showerror("Error", "No snails detected! Run 'Find Snails' first.")
+            return
+        first_snail = list(self.detected_snails.values())[0]
+        self.draw_single_snail(first_snail)
 
-root.mainloop()
+    def update_snail_display(self):
+        """
+        Updates the display to show the currently selected snail based on the current index.
+        """
+        snail_keys = list(self.detected_snails.keys())
+        if not snail_keys:
+            messagebox.showerror("Error", "No snails detected! Run 'Find Snails' first.")
+            return
+        idx = self.current_snail_idx.get()
+        if idx < 0:
+            idx = 0
+        if idx >= len(snail_keys):
+            idx = len(snail_keys) - 1
+        self.current_snail_idx.set(idx)
+        snail = self.detected_snails[snail_keys[idx]]
+        self.draw_single_snail(snail)
+        self.snail_id_entry.delete(0, tk.END)
+        self.snail_id_entry.insert(0, str(snail_keys[idx]))
+
+    def prev_snail(self):
+        """
+        Moves to the previous snail in the detected snails list and updates the display.
+        """
+        if self.detected_snails:
+            self.current_snail_idx.set(max(0, self.current_snail_idx.get() - 1))
+            self.update_snail_display()
+
+    def next_snail(self):
+        """
+        Moves to the next snail in the detected snails list and updates the display.
+        """
+        if self.detected_snails:
+            self.current_snail_idx.set(min(len(self.detected_snails) - 1, self.current_snail_idx.get() + 1))
+            self.update_snail_display()
+
+    def goto_snail(self):
+        """
+        Jumps to a specific snail in the detected snails list based on user input.
+        """
+        if self.detected_snails:
+            snail_keys = list(self.detected_snails.keys())
+            val = self.snail_id_entry.get()
+            try:
+                idx = int(val)
+                if 0 <= idx < len(snail_keys):
+                    self.current_snail_idx.set(idx)
+                    self.update_snail_display()
+                    return
+            except ValueError:
+                pass
+            if val in snail_keys:
+                idx = snail_keys.index(val)
+                self.current_snail_idx.set(idx)
+                self.update_snail_display()
+            else:
+                messagebox.showerror("Error", f"Snail '{val}' not found.")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SnailGUI(root)
+    root.mainloop()
