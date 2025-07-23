@@ -1,2 +1,5 @@
 matlab_code
-data/snails_on_a4.jpg
+data/
+.vscode/
+.conda/
+__pycache__/
