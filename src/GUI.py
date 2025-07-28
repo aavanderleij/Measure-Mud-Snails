@@ -19,6 +19,10 @@ class SnailGUI:
         self.snail_obj = None
         self.current_snail_idx = tk.IntVar(value=0)
         self.reference_obj_width_mm = 10.42
+        self.pos_key = None
+        # Typing delay for input fields (in milliseconds)
+        self.typing_delay = 500  
+        self.after_id = None
 
 
         self.setup_layout()
@@ -41,6 +45,10 @@ class SnailGUI:
         self.tools_frame = ttk.LabelFrame(self.left_frame, text="Select between various tools or filters", width=250, height=200)
         self.tools_frame.pack(fill="x", pady=10)
 
+        # Sample data
+        self.input_data_frame = ttk.LabelFrame(self.left_frame, text="Sample data", width=250, height=100)
+        self.input_data_frame.pack(fill="x", pady=10)
+
         # Checkbuttons for contour options
         self.draw_contours_var = tk.BooleanVar(value=True)
         self.draw_measurements_var = tk.BooleanVar(value=True)
@@ -59,6 +67,17 @@ class SnailGUI:
         self.processed_label = tk.Label(self.right_frame, text="Processed image")
         self.processed_label.pack(expand=True)
 
+        # Input fields for Sample data
+        self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
+        self.pos_key_label.pack(anchor="w")
+        self.pos_key_entry = tk.Entry(self.input_data_frame)
+        self.pos_key_entry.bind("<KeyRelease>", self.delay_poskey_field_key_release)
+        self.pos_key_entry.pack(fill="x")
+
+        self.subsample_label = tk.Label(self.input_data_frame, text="Subsample:")
+        self.subsample_label.pack(anchor="w")
+        self.subsample_entry = tk.Entry(self.input_data_frame)
+        self.subsample_entry.pack(fill="x")
 
         # Add buttons
         self.select_img_btn = ttk.Button(self.left_frame, text="Select Image", command=self.select_image)
@@ -69,6 +88,7 @@ class SnailGUI:
 
         self.view_snail_btn = ttk.Button(self.left_frame, text="View Single Snail", command=self.view_single_snail)
         self.view_snail_btn.pack(pady=10)
+
 
     def select_image(self):
         """
@@ -111,6 +131,7 @@ class SnailGUI:
         ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_width_mm)
         pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
+        # get the Pixels Per Metric form the image
         self.snail_obj = SnailMeasurer()
         self.snail_obj.pixels_per_metric = pixels_per_metric
 
@@ -168,6 +189,46 @@ class SnailGUI:
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
+    
+    def get_pos_key(self):
+        """
+        Returns the position key from the input field.
+        """
+        # if pos_key is not empty
+        if self.pos_key_entry.get():
+
+            # strip trailing whitespace
+            poskey = self.pos_key_entry.get().strip()
+            # check if poskey is a valid number
+            if not poskey.isdigit():
+                self.pos_key_entry.config(bg="red")
+                return None
+            # check if poskey is 4 digits long
+            elif len(poskey) > 4:
+                self.pos_key_entry.config(bg="red")
+
+                return None
+            else:
+                self.pos_key_entry.config(bg="white")
+                self.pos_key = poskey
+            
+        return poskey
+    
+    def delay_poskey_field_key_release(self, event=None):
+
+        # if self.after_id exists
+        if self.after_id:
+            # cancel the previous after_id
+            self.root.after_cancel(self.after_id)
+        # set a new after_id with the function and typing delay
+        self.after_id = self.root.after(self.typing_delay, self.get_pos_key)
+
+
+    def get_subsample(self):
+        """
+        Returns the subsample from the input field.
+        """
+        return self.subsample_entry.get().strip()
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -11,11 +11,13 @@ class SnailObject:
             contour (np.ndarray): Contour points for the snail.
             bounding_box (np.ndarray): 4x2 array of bounding box coordinates.
         """
+
         self.snail_id = snail_id
         self.length = length
         self.width = width
         self.contour = contour
         self.bounding_box = bounding_box
+        self.pos_key = None
 
     def to_dict(self):
         """
