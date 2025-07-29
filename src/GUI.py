@@ -151,6 +151,8 @@ class SnailGUI:
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
 
+
+
     def inspect_single_snail(self):
         """
         Opens the inspect window for a single snail.
@@ -215,6 +217,9 @@ class SnailGUI:
         return poskey
     
     def delay_poskey_field_key_release(self, event=None):
+        """
+        Delays the execution of get_pos_key to avoid excessive calls while typing.
+        """
 
         # if self.after_id exists
         if self.after_id:
@@ -222,13 +227,61 @@ class SnailGUI:
             self.root.after_cancel(self.after_id)
         # set a new after_id with the function and typing delay
         self.after_id = self.root.after(self.typing_delay, self.get_pos_key)
+    
+    def delay_subsample_field_key_release(self, event=None):
+        """
+        Delays the execution of get_subsample to avoid excessive calls while typing.
+        """
+
+        # if self.after_id exists
+        if self.after_id:
+            # cancel the previous after_id
+            self.root.after_cancel(self.after_id)
+        # set a new after_id with the function and typing delay
+        self.after_id = self.root.after(self.typing_delay, self.get_subsample)
 
 
     def get_subsample(self):
         """
         Returns the subsample from the input field.
         """
-        return self.subsample_entry.get().strip()
+        # if subsample is not empty
+        if self.subsample_entry.get():
+
+            # strip trailing whitespace
+            subsample = self.subsample_entry.get().strip()
+            # check if subsample is a valid number
+            if not subsample.isdigit():
+                self.subsample_entry.config(bg="red")
+                return None
+            #TODO check if subsample is wihtin a valid range (ask Oscar or Anita)
+            elif int(subsample) < 1 or int(subsample) >= 100:
+                self.subsample_entry.config(bg="red")
+                return None
+
+            else:
+                self.subsample_entry.config(bg="white")
+                self.subsample = subsample
+            
+        return subsample
+
+    def submit_output(self):
+        """
+        Submits the output data to the SnailMeasurer object.
+        """
+        #TODO add all snail data to a csv output or whatever. 
+        pos_key = self.get_pos_key()
+        subsample = self.get_subsample()
+
+        if pos_key is None or subsample is None:
+            messagebox.showerror("Error", "Please fill in valid Pos Key and Subsample values.")
+            return
+
+        # Submit the data to the SnailMeasurer object
+        self.snail_obj.submit_output(pos_key, subsample)
+
+        # Show success message
+        messagebox.showinfo("Success", "Output submitted successfully!")
 
 if __name__ == "__main__":
     root = tk.Tk()
