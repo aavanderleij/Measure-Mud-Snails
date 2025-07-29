@@ -70,3 +70,39 @@ def draw_midpoints_and_lines(image, box_points):
         cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
 
         return image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY
+
+def annotate_dimensions(image, name, dimA, dimB, box_points):
+        """
+        Annotates the image with the measured dimensions of the detected rectangle.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            name (str): The label to annotate on the left side of the rectangle.
+            dimA (float): First dimension in mm.
+            dimB (float): Second dimension in mm.
+            box_points (numpy.ndarray): The 4 points of the rectangle.
+
+        Returns:
+            None
+        """
+
+        # Unpack box points
+        (tl, tr, br, bl) = box_points
+
+        # Calculate midpoints using the midpoint function from utils
+        tltr = midpoint(tl, tr)
+        blbr = midpoint(bl, br)
+        tlbl = midpoint(tl, bl)
+        trbr = midpoint(tr, br)
+
+        # Annotate the dimensions on the image
+        cv2.putText(image, "{:.1f}mm".format(dimA),
+                    (int(tltr[0] - 15), int(tltr[1] - 10)), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (0, 255, 255), 3)
+        cv2.putText(image, "{:.1f}mm".format(dimB),
+                    (int(trbr[0] + 10), int(trbr[1])), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (0, 255, 255), 3)
+        # Annotate the name on the left side of the rectangle
+        cv2.putText(image, name,
+                    (int(tlbl[0] - 80), int(tlbl[1])), cv2.FONT_HERSHEY_SIMPLEX,
+                    3, (255, 0, 0), 3)

@@ -2,6 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import ttk, messagebox
 import cv2
+from src.utils import draw_midpoints_and_lines, annotate_dimensions
 
 class SnailInspectWindow:
     def __init__(self, parent, image, detected_snails):
@@ -54,7 +55,16 @@ class SnailInspectWindow:
         # Otherwise, just draw the contour
         if hasattr(snail, "contour"):
             cv2.drawContours(annotated_image, [snail.contour], -1, (0,255,0), 2)
+        
+        if hasattr(snail, "bounding_box"):
+            box_points = snail.bounding_box
+            cv2.polylines(annotated_image, [box_points.astype("int")], True, (0, 255, 0), 2)
+        
+        # Annotate dimensions
+        if hasattr(snail, "length") and hasattr(snail, "width"):
+            annotate_dimensions(annotated_image, snail.snail_id, snail.length, snail.width, box_points)
         # If you have a SnailMeasurer instance, you can use its method here
+        
 
         annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(annotated_image_rgb)
@@ -81,6 +91,12 @@ class SnailInspectWindow:
         self.draw_single_snail(snail)
         self.snail_id_entry.delete(0, tk.END)
         self.snail_id_entry.insert(0, str(snail_keys[idx]))
+    
+    def remove_snail(self):
+        """
+        Removes the currently displayed snail from the detected snails.
+        """
+        pass
 
     def prev_snail(self):
         if self.detected_snails:
