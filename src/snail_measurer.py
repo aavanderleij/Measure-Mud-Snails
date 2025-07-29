@@ -305,7 +305,7 @@ class SnailMeasurer(ImageRuler):
                     image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = draw_midpoints_and_lines(image, box_points)
                     # Annotate the dimensions on the image
                     if draw_measurements:
-                        self.annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+                        self.annotate_dimensions(image, name, dimA, dimB, box_points)
                     # add the id to the countour
                     
                     # write the snail measurements to csv
@@ -325,9 +325,7 @@ class SnailMeasurer(ImageRuler):
 
                     snails[name] = snail
                     snail_ID += 1
-
-        #TODO make optional
-        # self.show_image(image, title="Detected Contours")
+                    
         return snails
     
     def draw_single_snail(self, image, snail):
@@ -349,7 +347,7 @@ class SnailMeasurer(ImageRuler):
         # Draw midpoints and lines
         image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = draw_midpoints_and_lines(image, box_points)
         # Annotate the dimensions on the image
-        self.annotate_dimensions(image, snail.snail_id, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
+        self.annotate_dimensions(image, snail.snail_id, dimA, dimB, box_points)
 
         return image
 
