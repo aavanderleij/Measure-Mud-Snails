@@ -222,8 +222,21 @@ class SnailMeasurer(ImageRuler):
 
         self.show_image(separated, title="Separated Snails")
         return separated
+    
+    def export_to_csv(self, snails):
+        """
+        Exports snail measurements to a CSV file.
 
-    def write_snail_to_csv(self, snail_obj, filename="snail_measurements.csv"):
+        Args:
+            snails (dict): Dictionary of SnailObject instances.
+        """
+        # Create a directory for the CSV files if it doesn't exist
+        os.makedirs("snail_measurements", exist_ok=True)
+
+        for snail_id, snail_obj in snails.items():
+            self.write_snail_to_csv(snail_obj)
+
+    def write_snail_to_csv(self, snail_obj):
         """
         Writes the snail's name, length, and width to a CSV file.
         #TODO discuss if we want a mega file with all measurements of separate csv per image
@@ -237,8 +250,8 @@ class SnailMeasurer(ImageRuler):
         #TODO check if snail is already in the file, if so, update the measurements
 
 
-        file_exists = os.path.isfile(filename)
-        with open(filename, mode='a', newline='') as file:
+        file_exists = os.path.isfile(f"snail_measurements_{snail_obj.pos_key}.csv")
+        with open(f"snail_measurements_{snail_obj.pos_key}.csv", mode='a', newline='') as file:
             writer = csv.writer(file)
             if not file_exists:
                 writer.writerow(["Name", "PosKey", "Length (mm)", "Width (mm)"])

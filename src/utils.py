@@ -31,3 +31,18 @@ def get_input_img(path):
     plt.imshow(image)
     plt.show()
     return image
+
+
+def midpoint(point_a, point_b):
+    """
+    Calculates the midpoint between two points.
+
+    Args:
+        point_a (tuple): The (x, y) coordinates of the first point.
+        point_b (tuple): The (x, y) coordinates of the second point.
+
+    Returns:
+        tuple: The (x, y) coordinates of the midpoint.
+    """
+    return ((point_a[0] + point_b[0]) * 0.5, (point_a[1] + point_b[1]) * 0.5)
+

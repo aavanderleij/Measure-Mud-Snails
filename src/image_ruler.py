@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.spatial import distance
 from imutils import perspective
+from src.utils import midpoint
 
 class ImageRuler:
     """
@@ -22,19 +23,7 @@ class ImageRuler:
         self.pixels_per_metric = None
         self.image = None
 
-    @staticmethod
-    def midpoint(point_a, point_b):
-        """
-        Calculates the midpoint between two points.
-
-        Args:
-            point_a (tuple): The (x, y) coordinates of the first point.
-            point_b (tuple): The (x, y) coordinates of the second point.
-
-        Returns:
-            tuple: The (x, y) coordinates of the midpoint.
-        """
-        return ((point_a[0] + point_b[0]) * 0.5, (point_a[1] + point_b[1]) * 0.5)
+    
     
     def get_dimensions_in_mm(self,box_points):
         """
@@ -64,7 +53,8 @@ class ImageRuler:
         
         return dimA, dimB
     
-    def annotate_dimensions(self, image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
+    @staticmethod
+    def annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY):
         """
         Annotates the image with the measured dimensions of the detected rectangle.
 
@@ -76,6 +66,8 @@ class ImageRuler:
         Returns:
             None
         """
+
+        # TODO make it take box_points as input instead of individual coordinates
 
         # Annotate the dimensions on the image
         cv2.putText(image, "{:.1f}mm".format(dimA),
@@ -140,10 +132,10 @@ class ImageRuler:
 
          # get midpoints
         (top_left, top_right, bottom_right, bottom_left) = box_points
-        (tltrX, tltrY) = self.midpoint(top_left, top_right)
-        (blbrX, blbrY) = self.midpoint(bottom_left, bottom_right)
-        (tlblX, tlblY) = self.midpoint(top_left, bottom_left)
-        (trbrX, trbrY) = self.midpoint(top_right, bottom_right)
+        (tltrX, tltrY) = midpoint(top_left, top_right)
+        (blbrX, blbrY) = midpoint(bottom_left, bottom_right)
+        (tlblX, tlblY) = midpoint(top_left, bottom_left)
+        (trbrX, trbrY) = midpoint(top_right, bottom_right)
 
         # for every midpoint, draw a circle and a line connecting the midpoints
         for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
