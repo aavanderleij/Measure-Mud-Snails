@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from src.image_ruler import ImageRuler
 from src.snail_object import SnailObject
+from src.utils import midpoint, draw_midpoints_and_lines
 import os
 
 class SnailMeasurer(ImageRuler):
@@ -301,7 +302,7 @@ class SnailMeasurer(ImageRuler):
                     if draw_bounding_box:
                         cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
                     # draw midpoints and lines
-                    image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
+                    image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = draw_midpoints_and_lines(image, box_points)
                     # Annotate the dimensions on the image
                     if draw_measurements:
                         self.annotate_dimensions(image, name, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
@@ -346,7 +347,7 @@ class SnailMeasurer(ImageRuler):
         # Draw rectangle contour
         cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
         # Draw midpoints and lines
-        image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = self.draw_midpoints_and_lines(image, box_points)
+        image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = draw_midpoints_and_lines(image, box_points)
         # Annotate the dimensions on the image
         self.annotate_dimensions(image, snail.snail_id, dimA, dimB, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY)
 

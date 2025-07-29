@@ -28,8 +28,6 @@ def get_input_img(path):
     elif path.lower().endswith(('.jpg', '.jpeg', '.png')):
         print(f"Reading image file from {path}")
         image = cv2.imread(path)
-    plt.imshow(image)
-    plt.show()
     return image
 
 
@@ -46,3 +44,29 @@ def midpoint(point_a, point_b):
     """
     return ((point_a[0] + point_b[0]) * 0.5, (point_a[1] + point_b[1]) * 0.5)
 
+def draw_midpoints_and_lines(image, box_points):
+        """
+        Draws midpoints and lines between midpoints on the image.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
+
+        Returns:
+            None
+        """
+
+         # get midpoints
+        (top_left, top_right, bottom_right, bottom_left) = box_points
+        (tltrX, tltrY) = midpoint(top_left, top_right)
+        (blbrX, blbrY) = midpoint(bottom_left, bottom_right)
+        (tlblX, tlblY) = midpoint(top_left, bottom_left)
+        (trbrX, trbrY) = midpoint(top_right, bottom_right)
+
+        # for every midpoint, draw a circle and a line connecting the midpoints
+        for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
+            cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
+        cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
+        cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
+
+        return image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY
