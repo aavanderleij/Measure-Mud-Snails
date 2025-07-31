@@ -1,3 +1,5 @@
+import csv
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
@@ -5,7 +7,7 @@ import cv2
 import numpy as np
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
-from src.snail_inspect_window import SnailInspectWindow
+from src.snail_inspect_window import SnailInspectorCore
 
 class SnailGUI:
     def __init__(self, root):
@@ -16,14 +18,21 @@ class SnailGUI:
 
         self.original_loaded_image = None
         self.detected_snails = {}
-        self.snail_obj = None
+        self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
         self.reference_obj_width_mm = 10.42
         self.pos_key = None
         # Typing delay for input fields (in milliseconds)
         self.typing_delay = 500  
         self.after_id = None
+        self.inspector = None  # Will be set after detection
 
+        self.species = None
+        self.subsample = None
+        self.lab_method_code = None
+        self.analyst = None
+        self.project = None
+        self.year = None
 
         self.setup_layout()
 
@@ -67,17 +76,67 @@ class SnailGUI:
         self.processed_label = tk.Label(self.right_frame, text="Processed image")
         self.processed_label.pack(expand=True)
 
+        # Navigation interface for single snail
+        self.nav_frame = ttk.Frame(self.right_frame)
+        self.nav_frame.pack(side="bottom", pady=10)
+
+        self.prev_btn = ttk.Button(self.nav_frame, text="<-", width=3, command=self.prev_snail)
+        self.prev_btn.pack(side="left")
+
+        self.snail_id_entry = tk.Entry(self.nav_frame, width=5, justify="center")
+        self.snail_id_entry.pack(side="left", padx=2)
+
+        self.next_btn = ttk.Button(self.nav_frame, text="->", width=3, command=self.next_snail)
+        self.next_btn.pack(side="left")
+
+        self.goto_btn = ttk.Button(self.nav_frame, text="Go", width=3, command=self.goto_snail)
+        self.goto_btn.pack(side="left", padx=2)
+
         # Input fields for Sample data
+    
+
         self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
-        self.pos_key_label.pack(anchor="w")
+        self.pos_key_label.grid(row=0, column=0, sticky="w")
         self.pos_key_entry = tk.Entry(self.input_data_frame)
-        self.pos_key_entry.bind("<KeyRelease>", self.delay_poskey_field_key_release)
-        self.pos_key_entry.pack(fill="x")
+        self.pos_key_entry.bind("<KeyRelease>", self.delay_key_release(self.get_pos_key))
+        self.pos_key_entry.grid(row=0, column=1, sticky="ew")
 
         self.subsample_label = tk.Label(self.input_data_frame, text="Subsample:")
-        self.subsample_label.pack(anchor="w")
+        self.subsample_label.grid(row=1, column=0, sticky="w")
         self.subsample_entry = tk.Entry(self.input_data_frame)
-        self.subsample_entry.pack(fill="x")
+        self.subsample_entry.bind("<KeyRelease>", self.delay_key_release(self.get_subsample))
+        self.subsample_entry.grid(row=1, column=1, sticky="ew")
+
+        self.project_label = tk.Label(self.input_data_frame, text="Project:")
+        self.project_label.grid(row=2, column=0, sticky="w")
+        self.project_entry = tk.Entry(self.input_data_frame)
+        self.project_entry.bind("<KeyRelease>", self.delay_key_release(self.get_project))
+        self.project_entry.grid(row=2, column=1, sticky="ew")
+
+        self.species_label = tk.Label(self.input_data_frame, text="Species:")
+        self.species_label.grid(row=3, column=0, sticky="w")
+        self.species_entry = tk.Entry(self.input_data_frame)
+        self.species_entry.bind("<KeyRelease>", self.delay_key_release(self.get_species))
+        self.species_entry.grid(row=3, column=1, sticky="ew")
+
+
+        self.analyst_label = tk.Label(self.input_data_frame, text="Analyst:")
+        self.analyst_label.grid(row=4, column=0, sticky="w")
+        self.analyst_entry = tk.Entry(self.input_data_frame)
+        self.analyst_entry.bind("<KeyRelease>", self.delay_key_release(self.get_analyst))
+        self.analyst_entry.grid(row=4, column=1, sticky="ew")
+
+        self.year_label = tk.Label(self.input_data_frame, text="Year:")
+        self.year_label.grid(row=5, column=0, sticky="w")
+        self.year_entry = tk.Entry(self.input_data_frame)
+        self.year_entry.bind("<KeyRelease>", self.delay_key_release(self.get_year))
+        self.year_entry.grid(row=5, column=1, sticky="ew")
+
+        self.lab_method_code_label = tk.Label(self.input_data_frame, text="Lab Method Code:")
+        self.lab_method_code_label.grid(row=6, column=0, sticky="w")
+        self.lab_method_code_entry = tk.Entry(self.input_data_frame)
+        self.lab_method_code_entry.bind("<KeyRelease>", self.delay_key_release(self.get_lab_method_code))
+        self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
         # Add buttons
         self.select_img_btn = ttk.Button(self.left_frame, text="Select Image", command=self.select_image)
@@ -86,8 +145,9 @@ class SnailGUI:
         self.process_btn = ttk.Button(self.left_frame, text="Find Snails", command=self.measure_snails)
         self.process_btn.pack(pady=10)
 
-        self.view_snail_btn = ttk.Button(self.left_frame, text="View Single Snail", command=self.view_single_snail)
-        self.view_snail_btn.pack(pady=10)
+        self.save_btn = ttk.Button(self.left_frame, text="Save Measurements", command=self.write_measurements_to_csv)
+        self.save_btn.pack(pady=10)
+
 
 
     def select_image(self):
@@ -132,12 +192,12 @@ class SnailGUI:
         pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
         # get the Pixels Per Metric form the image
-        self.snail_obj = SnailMeasurer()
-        self.snail_obj.pixels_per_metric = pixels_per_metric
+        self.snail_measurer = SnailMeasurer()
+        self.snail_measurer.pixels_per_metric = pixels_per_metric
 
-        edged = self.snail_obj.prep_image(self.original_loaded_image)
+        edged = self.snail_measurer.prep_image(self.original_loaded_image)
         annotated_image = self.original_loaded_image.copy()
-        self.detected_snails = self.snail_obj.get_snail_contours(
+        self.detected_snails = self.snail_measurer.get_snail_contours(
             edged, annotated_image,
             draw_contours_all=self.draw_contours_var.get(),
             draw_measurements=self.draw_measurements_var.get(),
@@ -151,35 +211,55 @@ class SnailGUI:
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
 
+        self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
+        self.update_single_snail_display()
 
-
-    def inspect_single_snail(self):
-        """
-        Opens the inspect window for a single snail.
-        """
-        SnailInspectWindow(self.root, self.original_loaded_image, detected_snails=self.detected_snails)
-
-    def view_single_snail(self):
-        """
-        Displays the first detected snail in a new window.
-        """
-        if not self.detected_snails:
-            messagebox.showerror("Error", "No snails detected! Run 'Find Snails' first.")
+    def update_single_snail_display(self):
+        if not self.inspector or not self.detected_snails:
             return
-        first_snail = list(self.detected_snails.values())[0]
-        self.inspect_single_snail()
+        annotated_image, snail_id = self.inspector.get_annotated_image(
+            draw_func=self.snail_measurer.draw_single_snail if self.snail_measurer else None
+        )
+        if annotated_image is None:
+            return
+        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(annotated_image_rgb)
+        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        img_tk = ImageTk.PhotoImage(img_pil)
+        self.processed_label.config(image=img_tk, text="")
+        self.processed_label.image = img_tk
+        self.snail_id_entry.delete(0, tk.END)
+        self.snail_id_entry.insert(0, str(snail_id))
 
+    def prev_snail(self):
+        if self.inspector:
+            self.inspector.prev_snail()
+            self.update_single_snail_display()
 
+    def next_snail(self):
+        if self.inspector:
+            self.inspector.next_snail()
+            self.update_single_snail_display()
+
+    def goto_snail(self):
+        if self.inspector:
+            val = self.snail_id_entry.get()
+            try:
+                idx = int(val)
+            except ValueError:
+                idx = val
+            self.inspector.goto_snail(idx)
+            self.update_single_snail_display()
 
     def update_processed_image(self):
         """
         Updates the processed image display when a Checkbutton is changed.
         """
-        if self.original_loaded_image is None or self.snail_obj is None:
+        if self.original_loaded_image is None or self.snail_measurer is None:
             return
         annotated_image = self.original_loaded_image.copy()
-        edged = self.snail_obj.prep_image(self.original_loaded_image)
-        self.detected_snails = self.snail_obj.get_snail_contours(
+        edged = self.snail_measurer.prep_image(self.original_loaded_image)
+        self.detected_snails = self.snail_measurer.get_snail_contours(
             edged, annotated_image,
             draw_contours_all=self.draw_contours_var.get(),
             draw_measurements=self.draw_measurements_var.get(),
@@ -216,17 +296,19 @@ class SnailGUI:
             
         return poskey
     
-    def delay_poskey_field_key_release(self, event=None):
-        """
-        Delays the execution of get_pos_key to avoid excessive calls while typing.
-        """
 
-        # if self.after_id exists
+    def delay_key_release(self, get_function, event=None):
+        """
+        Delays the execution of a callback function to avoid excessive calls while typing.
+        
+        Parameters:
+        - get_funtion: function to be called after the delay
+        - event: optional Tkinter event (not used here but needed for binding)
+        """
         if self.after_id:
-            # cancel the previous after_id
             self.root.after_cancel(self.after_id)
-        # set a new after_id with the function and typing delay
-        self.after_id = self.root.after(self.typing_delay, self.get_pos_key)
+        self.after_id = self.root.after(self.typing_delay, get_function)
+
     
     def delay_subsample_field_key_release(self, event=None):
         """
@@ -254,7 +336,7 @@ class SnailGUI:
             if not subsample.isdigit():
                 self.subsample_entry.config(bg="red")
                 return None
-            #TODO check if subsample is wihtin a valid range (ask Oscar or Anita)
+            # currently there are sometimes numbers not 50, 25, 12.5, 6.25. maybe discuss with the team
             elif int(subsample) < 1 or int(subsample) >= 100:
                 self.subsample_entry.config(bg="red")
                 return None
@@ -263,25 +345,141 @@ class SnailGUI:
                 self.subsample_entry.config(bg="white")
                 self.subsample = subsample
             
-        return subsample
-
-    def submit_output(self):
+            return subsample
+    
+    def get_project(self):
         """
-        Submits the output data to the SnailMeasurer object.
+        Returns the project from the input field.
         """
-        #TODO add all snail data to a csv output or whatever. 
-        pos_key = self.get_pos_key()
-        subsample = self.get_subsample()
+        # if project is not empty
+        if self.project_entry.get():
 
-        if pos_key is None or subsample is None:
-            messagebox.showerror("Error", "Please fill in valid Pos Key and Subsample values.")
-            return
+            # strip trailing whitespace
+            project = self.project_entry.get().strip()
+            # check if project is a valid string
+            if not project:
+                self.project_entry.config(bg="red")
+                return None
+            else:
+                self.project_entry.config(bg="white")
+                self.project = project
 
-        # Submit the data to the SnailMeasurer object
-        self.snail_obj.submit_output(pos_key, subsample)
+            return project
+    
+    def get_species(self):
+        """
+        Returns the species from the input field.
+        """
 
-        # Show success message
-        messagebox.showinfo("Success", "Output submitted successfully!")
+        if self.species_entry.get():
+
+            # strip trailing whitespace
+            species = self.species_entry.get().strip()
+            # check if species is a valid string
+            if not species:
+                self.species_entry.config(bg="red")
+                return None
+            else:
+                self.species_entry.config(bg="white")
+                self.species = species
+            return species
+    
+    def get_analyst(self):
+        """
+        Returns the analyst from the input field.
+        """
+        # if analyst is not empty
+        if self.analyst_entry.get():
+
+            # strip trailing whitespace
+            analyst = self.analyst_entry.get().strip()
+            # check if analyst is a valid string
+            if not analyst:
+                self.analyst_entry.config(bg="red")
+                return None
+            else:
+                self.analyst_entry.config(bg="white")
+                self.analyst = analyst
+
+            return analyst
+    def get_year(self):
+        """
+        Returns the year from the input field.
+        """
+        # if year is not empty
+        if self.year_entry.get():
+
+            # strip trailing whitespace
+            year = self.year_entry.get().strip()
+            # check if year is a valid number
+            if not year.isdigit() or len(year) != 4:
+                self.year_entry.config(bg="red")
+                return None
+            else:
+                self.year_entry.config(bg="white")
+                self.year = year
+
+            return year
+    
+    def get_lab_method_code(self):
+        """
+        Returns the lab method code from the input field.
+        """
+        # if lab_method_code is not empty
+        if self.lab_method_code_entry.get():
+
+            # strip trailing whitespace
+            lab_method_code = self.lab_method_code_entry.get().strip()
+            # check if lab_method_code is a valid string
+            if not lab_method_code:
+                self.lab_method_code_entry.config(bg="red")
+                return None
+            else:
+                self.lab_method_code_entry.config(bg="white")
+                self.lab_method_code = lab_method_code
+
+            return lab_method_code
+    
+
+
+    def write_measurements_to_csv(self, filename="snail_measurements.csv"):
+        """
+        Writes a single sample and its instances to a CSV file.
+
+        Parameters:
+        - filename (str): The name of the output CSV file.
+        - sample_data (dict): Dictionary containing sample-level data.
+        - instances (list of dict): List of dictionaries, each representing an instance.
+        """
+        # Define the fieldnames for the CSV
+        fieldnames = [
+            "Pos_key", "Species", "Subsample", "Analyst", "Project",
+            "Year", "Time of measurement", "Lab_method_code", "ID", "Length(mm)", "Width(mm)"
+        ]
+
+        # Open the CSV file for writing
+        with open(filename, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            # Write each instance with the sample-level data
+
+            for snail_key in self.detected_snails:
+                snail = self.detected_snails[snail_key]
+                row = {
+                    "Pos_key": self.get_pos_key(),
+                    "Species": self.get_species(),
+                    "Subsample": self.get_subsample(),
+                    "Analyst": self.get_analyst(),
+                    "Project": self.get_project(),
+                    "Year": self.get_year(),
+                    "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Lab_method_code": self.get_lab_method_code(),
+                    "ID": snail.snail_id,
+                    "Length(mm)": snail.length,
+                    "Width(mm)": snail.width
+                }
+                writer.writerow(row)
 
 if __name__ == "__main__":
     root = tk.Tk()
