@@ -32,4 +32,4 @@ class SnailObject:
         }
 
     def __repr__(self):
-        return f"SnailObject(id={self.snail_id}, length={self.length:.2f}mm"
+        return f"SnailObject(id={self.snail_id}, length={self.length:.2f}mm)"
