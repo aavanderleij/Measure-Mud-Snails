@@ -3,6 +3,54 @@ from PIL import Image, ImageTk
 from tkinter import ttk, messagebox
 import cv2
 from src.utils import draw_midpoints_and_lines, annotate_dimensions
+import warnings
+import math
+
+class SnailInspectorCore:
+    def __init__(self, image, detected_snails):
+        self.image = image
+        self.detected_snails = detected_snails
+        self.current_snail_idx = 0
+
+    def get_snail_keys(self):
+        return list(self.detected_snails.keys())
+
+    def get_current_snail(self):
+        keys = self.get_snail_keys()
+        if not keys:
+            return None
+        idx = max(0, min(self.current_snail_idx, len(keys) - 1))
+        return self.detected_snails[keys[idx]], keys[idx]
+
+    def goto_snail(self, idx_or_id):
+        keys = self.get_snail_keys()
+        if isinstance(idx_or_id, int):
+            idx = max(0, min(idx_or_id, len(keys) - 1))
+        else:
+            try:
+                idx = keys.index(idx_or_id)
+            except ValueError:
+                idx = 0
+        self.current_snail_idx = idx
+
+    def next_snail(self):
+        self.goto_snail(self.current_snail_idx + 1)
+
+    def prev_snail(self):
+        self.goto_snail(self.current_snail_idx - 1)
+
+    def get_annotated_image(self, draw_func=None):
+        snail, snail_id = self.get_current_snail()
+        if snail is None:
+            return None, None
+        annotated_image = self.image.copy()
+        if draw_func:
+            annotated_image = draw_func(annotated_image, snail)
+        else:
+            # fallback: just draw contour
+            if hasattr(snail, "contour"):
+                cv2.drawContours(annotated_image, [snail.contour], -1, (0,255,0), 2)
+        return annotated_image, snail_id
 
 class SnailInspectWindow:
     def __init__(self, parent, image, detected_snails):
@@ -18,6 +66,7 @@ class SnailInspectWindow:
         self.detected_snails = detected_snails
         self.current_snail_idx = tk.IntVar(value=0)
         self.image = image
+        self.core = SnailInspectorCore(image, detected_snails)  # Core logic
         self.setup_window()
 
     def setup_window(self):
@@ -126,3 +175,5 @@ class SnailInspectWindow:
                 self.update_snail_display()
             else:
                 messagebox.showerror("Error", f"Snail '{val}' not found.")
+
+

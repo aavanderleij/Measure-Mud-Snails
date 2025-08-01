@@ -23,7 +23,7 @@ class SnailGUI:
         self.reference_obj_width_mm = 10.42
         self.pos_key = None
         # Typing delay for input fields (in milliseconds)
-        self.typing_delay = 500  
+        self.typing_delay = 500
         self.after_id = None
         self.inspector = None  # Will be set after detection
 
@@ -93,49 +93,50 @@ class SnailGUI:
         self.goto_btn.pack(side="left", padx=2)
 
         # Input fields for Sample data
-    
-
         self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
         self.pos_key_label.grid(row=0, column=0, sticky="w")
         self.pos_key_entry = tk.Entry(self.input_data_frame)
-        self.pos_key_entry.bind("<KeyRelease>", self.delay_key_release(self.get_pos_key))
+        self.pos_key_entry.bind("<KeyRelease>", self.get_pos_key)
         self.pos_key_entry.grid(row=0, column=1, sticky="ew")
 
         self.subsample_label = tk.Label(self.input_data_frame, text="Subsample:")
         self.subsample_label.grid(row=1, column=0, sticky="w")
         self.subsample_entry = tk.Entry(self.input_data_frame)
-        self.subsample_entry.bind("<KeyRelease>", self.delay_key_release(self.get_subsample))
+        self.subsample_entry.bind("<KeyRelease>", self.get_subsample)
         self.subsample_entry.grid(row=1, column=1, sticky="ew")
 
         self.project_label = tk.Label(self.input_data_frame, text="Project:")
         self.project_label.grid(row=2, column=0, sticky="w")
         self.project_entry = tk.Entry(self.input_data_frame)
-        self.project_entry.bind("<KeyRelease>", self.delay_key_release(self.get_project))
+        self.project_entry.bind("<KeyRelease>", self.get_project)
+        self.project_entry.insert(0, "SIBES")  # Default
         self.project_entry.grid(row=2, column=1, sticky="ew")
 
         self.species_label = tk.Label(self.input_data_frame, text="Species:")
         self.species_label.grid(row=3, column=0, sticky="w")
         self.species_entry = tk.Entry(self.input_data_frame)
-        self.species_entry.bind("<KeyRelease>", self.delay_key_release(self.get_species))
+        self.species_entry.bind("<KeyRelease>", self.get_species)
+        self.species_entry.insert(0, "Peringia")  # Default
         self.species_entry.grid(row=3, column=1, sticky="ew")
 
 
         self.analyst_label = tk.Label(self.input_data_frame, text="Analyst:")
         self.analyst_label.grid(row=4, column=0, sticky="w")
         self.analyst_entry = tk.Entry(self.input_data_frame)
-        self.analyst_entry.bind("<KeyRelease>", self.delay_key_release(self.get_analyst))
+        self.analyst_entry.bind("<KeyRelease>", self.get_analyst)
         self.analyst_entry.grid(row=4, column=1, sticky="ew")
 
         self.year_label = tk.Label(self.input_data_frame, text="Year:")
         self.year_label.grid(row=5, column=0, sticky="w")
         self.year_entry = tk.Entry(self.input_data_frame)
-        self.year_entry.bind("<KeyRelease>", self.delay_key_release(self.get_year))
+        self.year_entry.bind("<KeyRelease>", self.get_year)
         self.year_entry.grid(row=5, column=1, sticky="ew")
 
         self.lab_method_code_label = tk.Label(self.input_data_frame, text="Lab Method Code:")
         self.lab_method_code_label.grid(row=6, column=0, sticky="w")
         self.lab_method_code_entry = tk.Entry(self.input_data_frame)
-        self.lab_method_code_entry.bind("<KeyRelease>", self.delay_key_release(self.get_lab_method_code))
+        self.lab_method_code_entry.bind("<KeyRelease>", self.get_lab_method_code)
+        self.lab_method_code_entry.insert(0, 19) # Default
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
         # Add buttons
@@ -271,8 +272,8 @@ class SnailGUI:
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
-    
-    def get_pos_key(self):
+
+    def get_pos_key(self, event=None):
         """
         Returns the position key from the input field.
         """
@@ -293,23 +294,10 @@ class SnailGUI:
             else:
                 self.pos_key_entry.config(bg="white")
                 self.pos_key = poskey
-            
+
         return poskey
-    
 
-    def delay_key_release(self, get_function, event=None):
-        """
-        Delays the execution of a callback function to avoid excessive calls while typing.
-        
-        Parameters:
-        - get_funtion: function to be called after the delay
-        - event: optional Tkinter event (not used here but needed for binding)
-        """
-        if self.after_id:
-            self.root.after_cancel(self.after_id)
-        self.after_id = self.root.after(self.typing_delay, get_function)
 
-    
     def delay_subsample_field_key_release(self, event=None):
         """
         Delays the execution of get_subsample to avoid excessive calls while typing.
@@ -323,7 +311,7 @@ class SnailGUI:
         self.after_id = self.root.after(self.typing_delay, self.get_subsample)
 
 
-    def get_subsample(self):
+    def get_subsample(self, event=None):
         """
         Returns the subsample from the input field.
         """
@@ -333,21 +321,25 @@ class SnailGUI:
             # strip trailing whitespace
             subsample = self.subsample_entry.get().strip()
             # check if subsample is a valid number
-            if not subsample.isdigit():
+            
+            try:
+                subsample_float = float(subsample)
+            except ValueError:
                 self.subsample_entry.config(bg="red")
                 return None
+
             # currently there are sometimes numbers not 50, 25, 12.5, 6.25. maybe discuss with the team
-            elif int(subsample) < 1 or int(subsample) >= 100:
+            if subsample_float < 1 or subsample_float > 100:
                 self.subsample_entry.config(bg="red")
                 return None
 
             else:
                 self.subsample_entry.config(bg="white")
-                self.subsample = subsample
-            
-            return subsample
-    
-    def get_project(self):
+                self.subsample = subsample_float
+
+            return subsample_float
+
+    def get_project(self, event=None):
         """
         Returns the project from the input field.
         """
@@ -365,8 +357,8 @@ class SnailGUI:
                 self.project = project
 
             return project
-    
-    def get_species(self):
+
+    def get_species(self, event=None):
         """
         Returns the species from the input field.
         """
@@ -383,8 +375,8 @@ class SnailGUI:
                 self.species_entry.config(bg="white")
                 self.species = species
             return species
-    
-    def get_analyst(self):
+
+    def get_analyst(self, event=None):
         """
         Returns the analyst from the input field.
         """
@@ -402,7 +394,7 @@ class SnailGUI:
                 self.analyst = analyst
 
             return analyst
-    def get_year(self):
+    def get_year(self, event=None):
         """
         Returns the year from the input field.
         """
@@ -412,7 +404,7 @@ class SnailGUI:
             # strip trailing whitespace
             year = self.year_entry.get().strip()
             # check if year is a valid number
-            if not year.isdigit() or len(year) != 4:
+            if not year.isdigit() or len(year) > 4:
                 self.year_entry.config(bg="red")
                 return None
             else:
@@ -420,8 +412,8 @@ class SnailGUI:
                 self.year = year
 
             return year
-    
-    def get_lab_method_code(self):
+
+    def get_lab_method_code(self, event=None):
         """
         Returns the lab method code from the input field.
         """
@@ -439,7 +431,7 @@ class SnailGUI:
                 self.lab_method_code = lab_method_code
 
             return lab_method_code
-    
+
 
 
     def write_measurements_to_csv(self, filename="snail_measurements.csv"):
