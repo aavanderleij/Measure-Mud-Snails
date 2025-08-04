@@ -11,6 +11,7 @@ class SnailInspectorCore:
         self.image = image
         self.detected_snails = detected_snails
         self.current_snail_idx = 0
+        self.deleted_snails = []
 
     def get_snail_keys(self):
         return list(self.detected_snails.keys())
@@ -51,6 +52,7 @@ class SnailInspectorCore:
             if hasattr(snail, "contour"):
                 cv2.drawContours(annotated_image, [snail.contour], -1, (0,255,0), 2)
         return annotated_image, snail_id
+    
 
 class SnailInspectWindow:
     def __init__(self, parent, image, detected_snails):
@@ -175,5 +177,6 @@ class SnailInspectWindow:
                 self.update_snail_display()
             else:
                 messagebox.showerror("Error", f"Snail '{val}' not found.")
+    
 
 

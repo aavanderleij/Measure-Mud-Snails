@@ -26,6 +26,7 @@ class SnailGUI:
         self.typing_delay = 500
         self.after_id = None
         self.inspector = None  # Will be set after detection
+        self.deleted_snails = []
 
         self.species = None
         self.subsample = None
@@ -91,6 +92,9 @@ class SnailGUI:
 
         self.goto_btn = ttk.Button(self.nav_frame, text="Go", width=3, command=self.goto_snail)
         self.goto_btn.pack(side="left", padx=2)
+
+        self.delete_btn = ttk.Button(self.nav_frame, text="Delete snail", width=12, command=self.delete_snail)
+        self.delete_btn.pack(side="left", padx=2)
 
         # Input fields for Sample data
         self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
@@ -189,6 +193,14 @@ class SnailGUI:
         # Calculate pixels per metric using the reference object
         #TODO show check to user if the reference object is correct
         #TODO check if this should be done here or in the SnailMeasurer class
+
+
+        # reset the detected snails
+        self.detected_snails = None
+        self.snail_measurer = None
+        self.inspector = None
+        self.deleted_snails = []
+
         ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_width_mm)
         pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
@@ -213,9 +225,11 @@ class SnailGUI:
         self.processed_label.image = img_tk
 
         self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
-        self.update_single_snail_display()
 
     def update_single_snail_display(self):
+        """
+        Updates the display for a single detected snail.
+        """
         if not self.inspector or not self.detected_snails:
             return
         annotated_image, snail_id = self.inspector.get_annotated_image(
@@ -251,6 +265,23 @@ class SnailGUI:
                 idx = val
             self.inspector.goto_snail(idx)
             self.update_single_snail_display()
+    
+    def delete_snail(self):
+        """
+        Deletes the currently displayed snail from the detected snails.
+        """
+        if self.inspector:
+            snail_id = self.snail_id_entry.get()
+            if snail_id.isdigit():
+                snail_id = int(snail_id)
+            if snail_id in self.detected_snails:
+                self.deleted_snails.append(snail_id)
+                del self.detected_snails[snail_id]
+                # self.inspector.delete_snail(snail_id)
+                self.update_single_snail_display()
+                print(f"deleted_snails: {self.deleted_snails}")
+            else:
+                messagebox.showwarning("Warning", f"Snail ID {snail_id} not found.")
 
     def update_processed_image(self):
         """
@@ -431,8 +462,6 @@ class SnailGUI:
                 self.lab_method_code = lab_method_code
 
             return lab_method_code
-
-
 
     def write_measurements_to_csv(self, filename="snail_measurements.csv"):
         """
