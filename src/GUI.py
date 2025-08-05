@@ -1,5 +1,7 @@
 import csv
 from datetime import datetime
+import glob
+import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
@@ -16,6 +18,7 @@ class SnailGUI:
         self.root.geometry("1000x700")
         self.root.configure(bg="#d0e7f9")
 
+        self.file_path = None
         self.original_loaded_image = None
         self.detected_snails = {}
         self.snail_measurer = None
@@ -147,7 +150,7 @@ class SnailGUI:
         self.select_img_btn = ttk.Button(self.left_frame, text="Select Image", command=self.select_image)
         self.select_img_btn.pack(pady=10)
 
-        self.process_btn = ttk.Button(self.left_frame, text="Find Snails", command=self.measure_snails)
+        self.process_btn = ttk.Button(self.left_frame, text="latest image", command=self.select_latest_image)
         self.process_btn.pack(pady=10)
 
         self.save_btn = ttk.Button(self.left_frame, text="Save Measurements", command=self.write_measurements_to_csv)
@@ -159,16 +162,17 @@ class SnailGUI:
         """
         Opens a file dialog to select an image and displays it in the GUI in the original image frame.
         """
-        file_path = filedialog.askopenfilename(
+        self.file_path = filedialog.askopenfilename(
             title="Select Image",
             filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp *.gif")]
         )
 
-        if file_path:
+        if self.file_path:
+            print(f"Selected file: {self.file_path}")
             try:
-                img = Image.open(file_path)
+                img = Image.open(self.file_path)
                 # set original_loaded_image to the full unedited resolution image
-                self.original_loaded_image = cv2.imread(file_path)
+                self.original_loaded_image = cv2.imread(self.file_path)
                 img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
                 img_tk = ImageTk.PhotoImage(img)
                 self.image_label.config(image=img_tk, text="")
@@ -181,6 +185,34 @@ class SnailGUI:
 
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to open image:\n{e}")
+    
+    def select_latest_image(self):
+        """
+        Opens a file dialog to select the latest image and displays it in the GUI in the original image frame.
+        """
+        folder_path = os.path.dirname(self.file_path)
+        list_of_files = glob.glob(os.path.join(folder_path, '*.jpg'))
+        latest_file = max(list_of_files, key=os.path.getctime)
+
+        self.file_path = latest_file
+        print(f"Selected latest file: {self.file_path}")
+        try:
+                img = Image.open(self.file_path)
+                # set original_loaded_image to the full unedited resolution image
+                self.original_loaded_image = cv2.imread(self.file_path)
+                img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
+                img_tk = ImageTk.PhotoImage(img)
+                self.image_label.config(image=img_tk, text="")
+                self.image_label.image = img_tk
+
+                try:
+                    self.measure_snails()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to process image:\n check your picture setup\n{e}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open image:\n{e}")
+        
 
     def measure_snails(self):
         """
@@ -289,11 +321,9 @@ class SnailGUI:
         """
         if self.original_loaded_image is None or self.snail_measurer is None:
             return
-        annotated_image = self.original_loaded_image.copy()
-        edged = self.snail_measurer.prep_image(self.original_loaded_image)
-        self.detected_snails = self.snail_measurer.get_snail_contours(
-            edged, annotated_image,
-            draw_contours_all=self.draw_contours_var.get(),
+        annotated_image = self.snail_measurer.draw_snails(
+            self.original_loaded_image, self.detected_snails, 
+            draw_contours=self.draw_contours_var.get(),
             draw_measurements=self.draw_measurements_var.get(),
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
@@ -472,14 +502,32 @@ class SnailGUI:
         - sample_data (dict): Dictionary containing sample-level data.
         - instances (list of dict): List of dictionaries, each representing an instance.
         """
+
+        self.save_file_path = filedialog.askdirectory(
+            title="Select Directory to Save CSV")
+
         # Define the fieldnames for the CSV
         fieldnames = [
             "Pos_key", "Species", "Subsample", "Analyst", "Project",
             "Year", "Time of measurement", "Lab_method_code", "ID", "Length(mm)", "Width(mm)"
         ]
 
+        if self.pos_key is None:
+            messagebox.showerror("Error", "Pos Key is required to save measurements.")
+            return
+        if self.species is None:
+            messagebox.showerror("Error", "Species is required to save measurements.")
+            return
+        if self.subsample is None:
+            messagebox.showerror("Error", "Subsample is required to save measurements.")
+            return
+        if self.analyst is None:
+            messagebox.showerror("Error", "Analyst is required to save measurements.")
+            return
+        
+
         # Open the CSV file for writing
-        with open(filename, mode='w', newline='', encoding='utf-8') as csvfile:
+        with open(os.path.join(self.save_file_path, filename), mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
