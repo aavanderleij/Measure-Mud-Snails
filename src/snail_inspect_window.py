@@ -23,16 +23,22 @@ class SnailInspectorCore:
         idx = max(0, min(self.current_snail_idx, len(keys) - 1))
         return self.detected_snails[keys[idx]], keys[idx]
 
+    
     def goto_snail(self, idx_or_id):
         keys = self.get_snail_keys()
+        if not keys:
+            return  # Handle empty list safely
+
         if isinstance(idx_or_id, int):
-            idx = max(0, min(idx_or_id, len(keys) - 1))
+            # Wrap around using modulo for both forward and backward
+            idx = idx_or_id % len(keys)
         else:
             try:
                 idx = keys.index(idx_or_id)
             except ValueError:
                 idx = 0
         self.current_snail_idx = idx
+
 
     def next_snail(self):
         self.goto_snail(self.current_snail_idx + 1)
