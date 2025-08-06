@@ -95,7 +95,6 @@ class ReferenceObject(ImageRuler):
             if self.is_reference_rectangle(cnt):
                 self.process_reference_rectangle(cnt, image)
 
-        self.show_image(image, title="Detected Reference Rectangle")
 
     def calculate_pixels_per_metric(self, image):
         """
@@ -117,6 +116,9 @@ class ReferenceObject(ImageRuler):
                 if area > max_area:
                     max_area = area
                     best_cnt = cnt
+                    print('Found reference rectangle with area:', area)
+        
+        self.show_image(image, title="Reference Rectangle Detection")
         if best_cnt is None:
             raise ValueError("No suitable reference rectangle found.")
 
