@@ -35,7 +35,7 @@ class SnailGUI:
         self.detected_snails = {}
         self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
-        self.reference_obj_width_mm = 10.42
+        self.reference_obj_width_mm = 10
         self.pos_key = None
         # Typing delay for input fields (in milliseconds)
         self.typing_delay = 500
