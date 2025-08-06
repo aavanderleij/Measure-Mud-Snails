@@ -18,6 +18,13 @@ def get_args():
     return args
 
 def get_input_img(path):
+    """
+    Reads an image from the specified path. Supports NEF, JPG, JPEG, and PNG formats.
+    Args:
+        path (str): The file path to the image.
+        Returns:
+        numpy.ndarray: The image read from the file.
+    """
 
     if path.lower().endswith('.nef'):
         print(f"Reading NEF file from {path}")
@@ -45,64 +52,66 @@ def midpoint(point_a, point_b):
     return ((point_a[0] + point_b[0]) * 0.5, (point_a[1] + point_b[1]) * 0.5)
 
 def draw_midpoints_and_lines(image, box_points):
-        """
-        Draws midpoints and lines between midpoints on the image.
+    """
+    Draws midpoints and lines between midpoints on the image.
 
-        Args:
-            image (numpy.ndarray): The image to annotate.
-            tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
+    Args:
+        image (numpy.ndarray): The image to annotate.
+        tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
 
-        Returns:
-            None
-        """
+    Returns:
+        None
+    """
 
-         # get midpoints
-        (top_left, top_right, bottom_right, bottom_left) = box_points
-        (tltrX, tltrY) = midpoint(top_left, top_right)
-        (blbrX, blbrY) = midpoint(bottom_left, bottom_right)
-        (tlblX, tlblY) = midpoint(top_left, bottom_left)
-        (trbrX, trbrY) = midpoint(top_right, bottom_right)
+        # get midpoints
+    (top_left, top_right, bottom_right, bottom_left) = box_points
+    (tltrX, tltrY) = midpoint(top_left, top_right)
+    (blbrX, blbrY) = midpoint(bottom_left, bottom_right)
+    (tlblX, tlblY) = midpoint(top_left, bottom_left)
+    (trbrX, trbrY) = midpoint(top_right, bottom_right)
 
-        # for every midpoint, draw a circle and a line connecting the midpoints
-        for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
-            cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
-        cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
-        cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
+    # for every midpoint, draw a circle and a line connecting the midpoints
+    for (x, y) in [(tltrX, tltrY), (blbrX, blbrY), (tlblX, tlblY), (trbrX, trbrY)]:
+        cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
+    cv2.line(image, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)), (255, 0, 255), 2)
+    cv2.line(image, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)), (255, 0, 255), 2)
 
-        return image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY
+    return image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY
 
-def annotate_dimensions(image, name, dimA, dimB, box_points):
-        """
-        Annotates the image with the measured dimensions of the detected rectangle.
+def annotate_dimensions(image, name, dimA, dimB, box_points, draw_measurements=True, draw_id=True):
+    """
+    Annotates the image with the measured dimensions of the detected rectangle.
 
-        Args:
-            image (numpy.ndarray): The image to annotate.
-            name (str): The label to annotate on the left side of the rectangle.
-            dimA (float): First dimension in mm.
-            dimB (float): Second dimension in mm.
-            box_points (numpy.ndarray): The 4 points of the rectangle.
+    Args:
+        image (numpy.ndarray): The image to annotate.
+        name (str): The label to annotate on the left side of the rectangle.
+        dimA (float): First dimension in mm.
+        dimB (float): Second dimension in mm.
+        box_points (numpy.ndarray): The 4 points of the rectangle.
 
-        Returns:
-            None
-        """
+    Returns:
+        None
+    """
 
-        # Unpack box points
-        (tl, tr, br, bl) = box_points
+    # Unpack box points
+    (tl, tr, br, bl) = box_points
 
-        # Calculate midpoints using the midpoint function from utils
-        tltr = midpoint(tl, tr)
-        blbr = midpoint(bl, br)
-        tlbl = midpoint(tl, bl)
-        trbr = midpoint(tr, br)
+    # Calculate midpoints using the midpoint function from utils
+    tltr = midpoint(tl, tr)
+    blbr = midpoint(bl, br)
+    tlbl = midpoint(tl, bl)
+    trbr = midpoint(tr, br)
 
-        # Annotate the dimensions on the image
+    # Annotate the dimensions on the image
+    if draw_measurements:
         cv2.putText(image, "{:.1f}mm".format(dimA),
                     (int(tltr[0] - 15), int(tltr[1] - 10)), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
         cv2.putText(image, "{:.1f}mm".format(dimB),
                     (int(trbr[0] + 10), int(trbr[1])), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (0, 255, 255), 3)
-        # Annotate the name on the left side of the rectangle
+    # Annotate the name on the left side of the rectangle
+    if draw_id:
         cv2.putText(image, name,
                     (int(tlbl[0] - 80), int(tlbl[1])), cv2.FONT_HERSHEY_SIMPLEX,
                     3, (255, 0, 0), 3)
