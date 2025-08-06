@@ -1,3 +1,12 @@
+"""
+A GUI application for measuring mud snails using image processing.
+This application allows users to select an image, process it to detect snails,
+and display measurements. It also provides functionality to save measurements to a CSV file.
+It uses the tkinter library for the GUI, PIL for image handling, and OpenCV for image processing.
+It includes features for navigating through detected snails, deleting snails, and updating the
+display based on user input.
+It also includes input fields for sample data such as position key, subsample, project, species
+"""
 import csv
 from datetime import datetime
 import glob
@@ -6,20 +15,23 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 import cv2
-import numpy as np
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
 from src.snail_inspect_window import SnailInspectorCore
 
 class SnailGUI:
+    """
+    A GUI application for measuring mud snails using image processing.
+    """
     def __init__(self, root):
         self.root = root
         self.root.title("Snail Measurement GUI")
-        self.root.geometry("1000x700")
+        self.root.geometry("1440x900")
         self.root.configure(bg="#d0e7f9")
 
         self.file_path = None
         self.original_loaded_image = None
+        self.annotated_image_rgb = None
         self.detected_snails = {}
         self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
@@ -49,13 +61,16 @@ class SnailGUI:
         self.left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
         # Original Image section
-        self.original_image_frame = ttk.LabelFrame(self.left_frame, text="Image Sample", width=250, height=150)
+        self.original_image_frame = ttk.LabelFrame(self.left_frame,
+                                                   text="Image Sample",
+                                                    width=250, height=150)
         self.original_image_frame.pack(fill="x", pady=10)
         self.image_label = tk.Label(self.original_image_frame, text="original image")
         self.image_label.pack(expand=True)
 
         # Tools/Filters section
-        self.tools_frame = ttk.LabelFrame(self.left_frame, text="Select between various tools or filters", width=250, height=200)
+        self.tools_frame = ttk.LabelFrame(self.left_frame, text="Select between various tools or filters",
+                                           width=250, height=200)
         self.tools_frame.pack(fill="x", pady=10)
 
         # Sample data
@@ -67,11 +82,17 @@ class SnailGUI:
         self.draw_measurements_var = tk.BooleanVar(value=True)
         self.draw_bounding_box_var = tk.BooleanVar(value=True)
 
-        self.cb_draw_contours = tk.Checkbutton(self.tools_frame, text="Draw All Contours", variable=self.draw_contours_var, command=self.update_processed_image)
+        self.cb_draw_contours = tk.Checkbutton(self.tools_frame, text="Draw All Contours",
+                                                variable=self.draw_contours_var,
+                                                command=self.update_processed_image)
         self.cb_draw_contours.pack(anchor="w")
-        self.cb_draw_measurements = tk.Checkbutton(self.tools_frame, text="Draw Measurements", variable=self.draw_measurements_var, command=self.update_processed_image)
+        self.cb_draw_measurements = tk.Checkbutton(self.tools_frame, text="Draw Measurements",
+                                                    variable=self.draw_measurements_var,
+                                                    command=self.update_processed_image)
         self.cb_draw_measurements.pack(anchor="w")
-        self.cb_draw_bounding_box = tk.Checkbutton(self.tools_frame, text="Draw Bounding Box", variable=self.draw_bounding_box_var, command=self.update_processed_image)
+        self.cb_draw_bounding_box = tk.Checkbutton(self.tools_frame, text="Draw Bounding Box",
+                                                    variable=self.draw_bounding_box_var,
+                                                    command=self.update_processed_image)
         self.cb_draw_bounding_box.pack(anchor="w")
 
         # Right panel for processed image
@@ -96,7 +117,8 @@ class SnailGUI:
         self.goto_btn = ttk.Button(self.nav_frame, text="Go", width=3, command=self.goto_snail)
         self.goto_btn.pack(side="left", padx=2)
 
-        self.delete_btn = ttk.Button(self.nav_frame, text="Delete snail", width=12, command=self.delete_snail)
+        self.delete_btn = ttk.Button(self.nav_frame, text="Delete snail", width=12,
+                                      command=self.delete_snail)
         self.delete_btn.pack(side="left", padx=2)
 
         # Input fields for Sample data
@@ -156,7 +178,8 @@ class SnailGUI:
         self.save_btn = ttk.Button(self.left_frame, text="Save Measurements", command=self.write_measurements_to_csv)
         self.save_btn.pack(pady=10)
 
-
+        self.plot_btn = ttk.Button(self.left_frame, text="View as Plot", command=self.view_image_as_plot)
+        self.plot_btn.pack(pady=10)
 
     def select_image(self):
         """
@@ -197,18 +220,18 @@ class SnailGUI:
         self.file_path = latest_file
         print(f"Selected latest file: {self.file_path}")
         try:
-                img = Image.open(self.file_path)
-                # set original_loaded_image to the full unedited resolution image
-                self.original_loaded_image = cv2.imread(self.file_path)
-                img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
-                img_tk = ImageTk.PhotoImage(img)
-                self.image_label.config(image=img_tk, text="")
-                self.image_label.image = img_tk
+            img = Image.open(self.file_path)
+            # set original_loaded_image to the full unedited resolution image
+            self.original_loaded_image = cv2.imread(self.file_path)
+            img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
+            img_tk = ImageTk.PhotoImage(img)
+            self.image_label.config(image=img_tk, text="")
+            self.image_label.image = img_tk
 
-                try:
-                    self.measure_snails()
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to process image:\n check your picture setup\n{e}")
+            try:
+                self.measure_snails()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to process image:\n check your picture setup\n{e}")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open image:\n{e}")
@@ -249,9 +272,9 @@ class SnailGUI:
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
 
-        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(annotated_image_rgb)
-        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(self.annotated_image_rgb)
+        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
@@ -269,14 +292,17 @@ class SnailGUI:
         )
         if annotated_image is None:
             return
-        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(annotated_image_rgb)
-        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(self.annotated_image_rgb)
+        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
         self.snail_id_entry.delete(0, tk.END)
         self.snail_id_entry.insert(0, str(snail_id))
+
+    def view_image_as_plot(self):
+        self.snail_measurer.show_image(self.annotated_image_rgb)
 
     def prev_snail(self):
         if self.inspector:
@@ -327,14 +353,14 @@ class SnailGUI:
             draw_measurements=self.draw_measurements_var.get(),
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
-        annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(annotated_image_rgb)
-        img_pil = img_pil.resize((600, 400), resample=Image.Resampling.LANCZOS)
+        self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(self.annotated_image_rgb)
+        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
 
-    def get_pos_key(self, event=None):
+    def get_pos_key(self, _):
         """
         Returns the position key from the input field.
         """
