@@ -22,31 +22,6 @@ class SnailMeasurer(ImageRuler):
         # call the parent constructor
         super().__init__()
 
-        # def prep_image(self, image):
-        #     """
-        #     Preprocesses the input image by converting to grayscale, bilateral filtering, and performing edge detection.
-
-        #     Args:
-        #         image (numpy.ndarray): The input BGR image.
-
-        #     Returns:
-        #         numpy.ndarray: The edge-detected image.
-        #     """
-        #     # Bilateral filter
-        #     blured = cv2.bilateralFilter(image, d=9, sigmaColor=50, sigmaSpace=50)
-
-        #     # Canny edge detection
-        #     edged = cv2.Canny(blured, 5, 30)
-
-        #     # Morphological operations to clean up the edges
-        #     # dilate contours to close gaps
-        #     edged = cv2.dilate(edged, None, iterations=2)
-        #     # erode to remove noise
-        #     edged = cv2.erode(edged, None, iterations=1)
-
-        #     # Show the blurred image for inspection
-        #     self.show_image(blured, title="Blurred Image")
-        #     return edged
     
     def prep_image(self, image):
         """
@@ -132,12 +107,12 @@ class SnailMeasurer(ImageRuler):
         # Detect circles using Hough Transform
         circles = cv2.HoughCircles(
             blurred,
-            cv2.HOUGH_GRADIENT, 
-            dp=1.2, 
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
             minDist=100,
-            param1=100, 
-            param2=30, 
-            minRadius=150, 
+            param1=100,
+            param2=30,
+            minRadius=150,
             maxRadius=2000
         )
         if circles is not None:
@@ -257,6 +232,25 @@ class SnailMeasurer(ImageRuler):
             if not file_exists:
                 writer.writerow(["Name", "PosKey", "Length (mm)", "Width (mm)"])
             writer.writerow([snail_obj.snail_id, snail_obj.pos_key, snail_obj.length, snail_obj.width])
+    
+    def draw_snails(self, image, snails, draw_contours=True, draw_measurements=True, draw_bounding_box=True):
+        """
+        Draws all detected snails on the image.
+
+        Args:
+            image (numpy.ndarray): The image to annotate.
+            snails (dict): Dictionary of SnailObject instances.
+
+        Returns:
+            numpy.ndarray: The annotated image.
+        """
+        annotated_image = image.copy()
+        for snail in snails.values():
+            annotated_image = self.draw_single_snail(annotated_image, snail, draw_contours=draw_contours,
+                                                      draw_measurements=draw_measurements,
+                                                      draw_bounding_box=draw_bounding_box)
+
+        return annotated_image
 
     def get_snail_contours(self, edged, image, draw_contours_all=True, draw_measurements=True, draw_bounding_box=True):
         """
@@ -271,8 +265,6 @@ class SnailMeasurer(ImageRuler):
         """
         
         cnts = self.get_contours(edged)
-
-        #TODO split function into separate functions
 
         # draw all contours on the image
         if draw_contours_all:
@@ -328,7 +320,7 @@ class SnailMeasurer(ImageRuler):
 
         return snails
     
-    def draw_single_snail(self, image, snail):
+    def draw_single_snail(self, image, snail, draw_contours=True, draw_measurements=True, draw_bounding_box=True):
         """
         Draws a single snail's contour and dimensions on the image.
 
@@ -342,12 +334,16 @@ class SnailMeasurer(ImageRuler):
         box_points = snail.bounding_box
         dimA, dimB = self.get_dimensions_in_mm(box_points)
 
+        if draw_contours:
+            # Draw the contour of the snail
+            cv2.drawContours(image, [snail.contour], -1, (0, 255, 0), 2)
         # Draw rectangle contour
-        cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
+        if draw_bounding_box:
+            cv2.drawContours(image, [box_points.astype("int")], -1, (0, 255, 0), 2)
         # Draw midpoints and lines
         image, tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY = draw_midpoints_and_lines(image, box_points)
         # Annotate the dimensions on the image
-        annotate_dimensions(image, snail.snail_id, dimA, dimB, box_points)
+        annotate_dimensions(image, snail.snail_id, dimA, dimB, box_points, draw_measurements=draw_measurements, draw_id=True)
 
         return image
 
@@ -396,3 +392,29 @@ class SnailMeasurer(ImageRuler):
 #         plt.show()
 # else:
 #     print("No circles detected.")
+
+    # def prep_image(self, image):
+    #     """
+    #     Preprocesses the input image by converting to grayscale, bilateral filtering, and performing edge detection.
+
+    #     Args:
+    #         image (numpy.ndarray): The input BGR image.
+
+    #     Returns:
+    #         numpy.ndarray: The edge-detected image.
+    #     """
+    #     # Bilateral filter
+    #     blured = cv2.bilateralFilter(image, d=9, sigmaColor=50, sigmaSpace=50)
+
+    #     # Canny edge detection
+    #     edged = cv2.Canny(blured, 5, 30)
+
+    #     # Morphological operations to clean up the edges
+    #     # dilate contours to close gaps
+    #     edged = cv2.dilate(edged, None, iterations=2)
+    #     # erode to remove noise
+    #     edged = cv2.erode(edged, None, iterations=1)
+
+    #     # Show the blurred image for inspection
+    #     self.show_image(blured, title="Blurred Image")
+    #     return edged

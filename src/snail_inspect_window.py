@@ -1,6 +1,6 @@
 import tkinter as tk
-from PIL import Image, ImageTk
 from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
 import cv2
 from src.utils import draw_midpoints_and_lines, annotate_dimensions
 import warnings
@@ -38,7 +38,6 @@ class SnailInspectorCore:
             except ValueError:
                 idx = 0
         self.current_snail_idx = idx
-
 
     def next_snail(self):
         self.goto_snail(self.current_snail_idx + 1)
