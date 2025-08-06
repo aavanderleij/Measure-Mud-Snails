@@ -519,7 +519,7 @@ class SnailGUI:
 
             return lab_method_code
 
-    def write_measurements_to_csv(self, filename="snail_measurements.csv"):
+    def write_measurements_to_csv(self):
         """
         Writes a single sample and its instances to a CSV file.
 
@@ -537,6 +537,8 @@ class SnailGUI:
             "Pos_key", "Species", "Subsample", "Analyst", "Project",
             "Year", "Time of measurement", "Lab_method_code", "ID", "Length(mm)", "Width(mm)"
         ]
+
+        filename=f"{self.pos_key}_snail_measurements.csv"
 
         if self.pos_key is None:
             messagebox.showerror("Error", "Pos Key is required to save measurements.")
@@ -562,14 +564,14 @@ class SnailGUI:
             for snail_key in self.detected_snails:
                 snail = self.detected_snails[snail_key]
                 row = {
-                    "Pos_key": self.get_pos_key(),
-                    "Species": self.get_species(),
-                    "Subsample": self.get_subsample(),
-                    "Analyst": self.get_analyst(),
-                    "Project": self.get_project(),
-                    "Year": self.get_year(),
+                    "Pos_key": self.pos_key,
+                    "Species": self.species,
+                    "Subsample": self.subsample,
+                    "Analyst": self.analyst,
+                    "Project": self.project,
+                    "Year": self.year,
                     "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Lab_method_code": self.get_lab_method_code(),
+                    "Lab_method_code": self.lab_method_code,
                     "ID": snail.snail_id,
                     "Length(mm)": snail.length,
                     "Width(mm)": snail.width
