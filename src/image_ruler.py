@@ -1,10 +1,13 @@
+"""
+Base class for measuring objects in images
+"""
 import cv2
 import imutils
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.spatial import distance
 from imutils import perspective
-from src.utils import midpoint, draw_midpoints_and_lines, annotate_dimensions
+from src.utils import draw_midpoints_and_lines
 
 class ImageRuler:
     """
@@ -23,8 +26,8 @@ class ImageRuler:
         self.pixels_per_metric = None
         self.image = None
 
-    
-    
+
+
     def get_dimensions_in_mm(self,box_points):
         """
         Calculates the dimensions of the rectangle in millimeters based on the midpoints.
@@ -33,29 +36,29 @@ class ImageRuler:
             tltrX, tltrY, blbrX, blbrY, tlblX, tlblY, trbrX, trbrY (float): Midpoint coordinates.
 
         Returns:
-            tuple: Dimensions in millimeters (dimA, dimB).
+            tuple: Dimensions in millimeters (dim_a, dim_b).
         """
 
         (top_left, top_right, _, bottom_left) = box_points
         # Calculate distances in pixels
 
         # Compute distances between adjacent corners
-        dA = distance.euclidean(top_left, top_right) 
-        dB = distance.euclidean(top_left, bottom_left) 
+        dist_a = distance.euclidean(top_left, top_right)
+        dist_b = distance.euclidean(top_left, bottom_left)
 
-        
+
         if self.pixels_per_metric is None:
-            raise ValueError("pixels_per_metric is not set. Please set it before calling get_dimensions_in_mm.")
-        
+            raise ValueError("pixels_per_metric is not set. " \
+            "Please set it before calling get_dimensions_in_mm.")
+
         # Convert to real-world units using the reference length
-        dimA = dA / self.pixels_per_metric
-        dimB = dB / self.pixels_per_metric
-        
-        return dimA, dimB
-    
-    @staticmethod
-    
-    
+        dim_a = dist_a / self.pixels_per_metric
+        dim_b = dist_b / self.pixels_per_metric
+
+        return dim_a, dim_b
+
+
+
     @staticmethod
     def get_min_area_rect_box(cnt):
         """
@@ -92,9 +95,9 @@ class ImageRuler:
         plt.axis('off')
         plt.title(title)
         plt.show()
-    
 
-    
+
+
 
     def get_contours(self, image):
         """
@@ -116,12 +119,13 @@ class ImageRuler:
 
 
         print(f"Found {len(cnts)} contours in the image.")
-        
+
         return cnts
 
     def draw_rectangle_contour(self, cnt, image):
         """
-        Shared logic for drawing, computing midpoints, and annotating dimensions for a rectangle contour.
+        Shared logic for drawing, computing midpoints, and annotating dimensions for a 
+        rectangle contour.
 
         Args:
             cnt (numpy.ndarray): The contour of the rectangle.
@@ -140,4 +144,4 @@ class ImageRuler:
         # Draw midpoints and lines
         draw_midpoints_and_lines(image, box_points)
 
-        return image 
+        return image
