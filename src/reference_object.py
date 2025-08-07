@@ -1,17 +1,25 @@
+"""
+Module for fiding and checking the refence object
+used for mesuring other objects
+"""
 import cv2
 import numpy as np
-from .image_ruler import ImageRuler
 from scipy.spatial import distance
-import matplotlib.pyplot as plt
+from .image_ruler import ImageRuler
 
 class ReferenceObject(ImageRuler):
-    
+    """
+    Class containing functions finding and checking the refence object
+    used for mesuring other objects.
+    """
+
     def __init__(self, reference_length_mm):
         """
         Initializes the ReferenceObject with a specified reference length in mm.
 
         Args:
-            reference_length_mm (float): The real-world length of the reference object in millimeters.
+            reference_length_mm (float): The real-world length of the reference object
+              in millimeters.
 
         Returns:
             None
@@ -19,11 +27,12 @@ class ReferenceObject(ImageRuler):
         super().__init__()
         # Initialize the reference length in mm
         self.reference_length_mm = reference_length_mm
-          
+
 
     def set_red_squire_ref_object_mask(self, image):
         """
-        Create a mask for red objects in the image using HSV color filtering and morphological operations.
+        Create a mask for red objects in the image using HSV color filtering
+        and morphological operations.
 
         Args:
             image (numpy.ndarray): The input BGR image.
@@ -44,7 +53,7 @@ class ReferenceObject(ImageRuler):
         # Morphological operations to clean up the mask
         mask = cv2.dilate(mask, None, iterations=2)
         mask = cv2.erode(mask, None, iterations=2)
-        
+
         # Find contours in the mask
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
@@ -69,7 +78,8 @@ class ReferenceObject(ImageRuler):
 
     def process_reference_rectangle(self, cnt, image):
         """
-        Processes a reference rectangle contour: draws it, computes midpoints, and annotates dimensions.
+        Processes a reference rectangle contour: draws it, computes midpoints,
+        and annotates dimensions.
 
         Args:
             cnt (numpy.ndarray): The contour of the rectangle.
@@ -98,7 +108,8 @@ class ReferenceObject(ImageRuler):
 
     def calculate_pixels_per_metric(self, image):
         """
-        Detects the reference rectangle and calculates pixels per metric (mm) using the smaller width.
+        Detects the reference rectangle and calculates pixels per metric (mm)
+        using the smaller width.
 
         Args:
             image (numpy.ndarray): The input BGR image.
@@ -117,13 +128,13 @@ class ReferenceObject(ImageRuler):
                     max_area = area
                     best_cnt = cnt
                     print('Found reference rectangle with area:', area)
-        
+
         self.show_image(image, title="Reference Rectangle Detection")
         if best_cnt is None:
             raise ValueError("No suitable reference rectangle found.")
 
         box = self.get_min_area_rect_box(best_cnt)
-        (tl, tr, br, bl) = box
+        (tl, tr, br, _) = box
         # Compute width and height in pixels
         width = distance.euclidean(tl, tr)
         height = distance.euclidean(tr, br)
