@@ -69,12 +69,14 @@ class SnailGUI:
         self.image_label.pack(expand=True)
 
         # Tools/Filters section
-        self.tools_frame = ttk.LabelFrame(self.left_frame, text="Select between various tools or filters",
-                                           width=250, height=200)
+        self.tools_frame = ttk.LabelFrame(self.left_frame,
+                                          text="Select between various tools or filters",
+                                            width=250, height=200)
         self.tools_frame.pack(fill="x", pady=10)
 
         # Sample data
-        self.input_data_frame = ttk.LabelFrame(self.left_frame, text="Sample data", width=250, height=100)
+        self.input_data_frame = ttk.LabelFrame(self.left_frame, text="Sample data",
+                                               width=250, height=100)
         self.input_data_frame.pack(fill="x", pady=10)
 
         # Checkbuttons for contour options
@@ -169,21 +171,26 @@ class SnailGUI:
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
         # Add buttons
-        self.select_img_btn = ttk.Button(self.left_frame, text="Select Image", command=self.select_image)
+        self.select_img_btn = ttk.Button(self.left_frame, text="Select Image",
+                                         command=self.select_image)
         self.select_img_btn.pack(pady=10)
 
-        self.process_btn = ttk.Button(self.left_frame, text="latest image", command=self.select_latest_image)
+        self.process_btn = ttk.Button(self.left_frame, text="latest image",
+                                      command=self.select_latest_image)
         self.process_btn.pack(pady=10)
 
-        self.save_btn = ttk.Button(self.left_frame, text="Save Measurements", command=self.write_measurements_to_csv)
+        self.save_btn = ttk.Button(self.left_frame, text="Save Measurements",
+                                   command=self.write_measurements_to_csv)
         self.save_btn.pack(pady=10)
 
-        self.plot_btn = ttk.Button(self.left_frame, text="View as Plot", command=self.view_image_as_plot)
+        self.plot_btn = ttk.Button(self.left_frame, text="View as Plot",
+                                   command=self.view_image_as_plot)
         self.plot_btn.pack(pady=10)
 
     def select_image(self):
         """
-        Opens a file dialog to select an image and displays it in the GUI in the original image frame.
+        Opens a file dialog to select an image and displays it in the GUI in 
+        the original image frame.
         """
         self.file_path = filedialog.askopenfilename(
             title="Select Image",
@@ -204,14 +211,17 @@ class SnailGUI:
                 try:
                     self.measure_snails()
                 except Exception as e:
-                    messagebox.showerror("Error", f"Failed to process image:\n check your picture setup\n{e}")
+                    messagebox.showerror("Error",
+                                        f"Failed to process image:\n check your picture setup\n{e}")
 
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to open image:\n{e}")
-    
+                messagebox.showerror("Error",
+                                     f"Failed to open image:\n{e}")
+
     def select_latest_image(self):
         """
-        Opens a file dialog to select the latest image and displays it in the GUI in the original image frame.
+        Opens a file dialog to select the latest image
+        and displays it in the GUI in the original image frame.
         """
         folder_path = os.path.dirname(self.file_path)
         list_of_files = glob.glob(os.path.join(folder_path, '*.jpg'))
@@ -231,15 +241,17 @@ class SnailGUI:
             try:
                 self.measure_snails()
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to process image:\n check your picture setup\n{e}")
+                messagebox.showerror("Error",
+                                     f"Failed to process image:\n check your picture setup\n{e}")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open image:\n{e}")
-        
+
 
     def measure_snails(self):
         """
-        Processes the loaded image to detect snails and display the results in the processed image frame.
+        Processes the loaded image to detect snails and display the results in
+         the processed image frame.
         """
         if self.original_loaded_image is None:
             messagebox.showerror("Error", "No image loaded!")
@@ -302,19 +314,36 @@ class SnailGUI:
         self.snail_id_entry.insert(0, str(snail_id))
 
     def view_image_as_plot(self):
+        """
+        funtion for vieuw as plot button.
+        Allowes the user to open the processed image as a matplotlib plot for
+        easier zoom functionality
+        """
         self.snail_measurer.show_image(self.annotated_image_rgb)
 
     def prev_snail(self):
+        """
+        Function for button to move the index of the visible snail backward,
+        allowing for cyleing throug the diffent snails
+        """
         if self.inspector:
             self.inspector.prev_snail()
             self.update_single_snail_display()
 
     def next_snail(self):
+        """
+        Function for button to move the index of the visible snail forward,
+        allowing for cyleing throug the diffent snails
+        """
         if self.inspector:
             self.inspector.next_snail()
             self.update_single_snail_display()
 
     def goto_snail(self):
+        """
+        funtion for entry field of naviation plane.
+        allowes user to enter specific id of snails
+        """
         if self.inspector:
             val = self.snail_id_entry.get()
             try:
@@ -323,7 +352,7 @@ class SnailGUI:
                 idx = val
             self.inspector.goto_snail(idx)
             self.update_single_snail_display()
-    
+
     def delete_snail(self):
         """
         Deletes the currently displayed snail from the detected snails.
@@ -348,7 +377,7 @@ class SnailGUI:
         if self.original_loaded_image is None or self.snail_measurer is None:
             return
         annotated_image = self.snail_measurer.draw_snails(
-            self.original_loaded_image, self.detected_snails, 
+            self.original_loaded_image, self.detected_snails,
             draw_contours=self.draw_contours_var.get(),
             draw_measurements=self.draw_measurements_var.get(),
             draw_bounding_box=self.draw_bounding_box_var.get()
@@ -408,14 +437,12 @@ class SnailGUI:
             # strip trailing whitespace
             subsample = self.subsample_entry.get().strip()
             # check if subsample is a valid number
-            
             try:
                 subsample_float = float(subsample)
             except ValueError:
                 self.subsample_entry.config(bg="red")
                 return None
 
-            # currently there are sometimes numbers not 50, 25, 12.5, 6.25. maybe discuss with the team
             if subsample_float < 1 or subsample_float > 100:
                 self.subsample_entry.config(bg="red")
                 return None
@@ -481,6 +508,7 @@ class SnailGUI:
                 self.analyst = analyst
 
             return analyst
+     
     def get_year(self, event=None):
         """
         Returns the year from the input field.
@@ -529,7 +557,7 @@ class SnailGUI:
         - instances (list of dict): List of dictionaries, each representing an instance.
         """
 
-        self.save_file_path = filedialog.askdirectory(
+        save_file_path = filedialog.askdirectory(
             title="Select Directory to Save CSV")
 
         # Define the fieldnames for the CSV
@@ -552,10 +580,11 @@ class SnailGUI:
         if self.analyst is None:
             messagebox.showerror("Error", "Analyst is required to save measurements.")
             return
-        
+
 
         # Open the CSV file for writing
-        with open(os.path.join(self.save_file_path, filename), mode='w', newline='', encoding='utf-8') as csvfile:
+        with open(os.path.join(save_file_path, filename),
+                   mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
@@ -577,6 +606,8 @@ class SnailGUI:
                     "Width(mm)": snail.width
                 }
                 writer.writerow(row)
+
+        messagebox.showinfo("info", f"output writen to {os.path.join(save_file_path, filename)}")
 
 if __name__ == "__main__":
     root = tk.Tk()
