@@ -3,3 +3,5 @@ data/
 .vscode/
 .conda/
 __pycache__/
+unused_code/
+.gitignore
