@@ -18,6 +18,7 @@ import cv2
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
 from src.snail_inspect_window import SnailInspectorCore
+from src.digi_cam_control_python import Camera
 
 class SnailGUI:
     """
@@ -28,6 +29,10 @@ class SnailGUI:
         self.root.title("Snail Measurement GUI")
         self.root.geometry("1440x900")
         self.root.configure(bg="#d0e7f9")
+
+        # Camera
+        self.camera = Camera()
+        self.output_path = os.path.join(os.getcwd(), "output")
 
         self.file_path = None
         self.original_loaded_image = None
@@ -171,12 +176,16 @@ class SnailGUI:
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
         # Add buttons
+        self.take_photo_btn = ttk.Button(self.left_frame, text="Take Photo",
+                                         command=self.capture)
+        self.take_photo_btn.pack(pady=10)
+
         self.select_img_btn = ttk.Button(self.left_frame, text="Select Image",
                                          command=self.select_image)
         self.select_img_btn.pack(pady=10)
 
-        self.process_btn = ttk.Button(self.left_frame, text="latest image",
-                                      command=self.select_latest_image)
+        self.process_btn = ttk.Button(self.left_frame, text="Select output folder",
+                                      command=self.select_output_folder)
         self.process_btn.pack(pady=10)
 
         self.save_btn = ttk.Button(self.left_frame, text="Save Measurements",
@@ -247,6 +256,26 @@ class SnailGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open image:\n{e}")
 
+    def capture(self):
+        """
+        activate digiCamControl and take photo
+        """
+
+        self.camera.set_folder(self.output_path)
+
+        self.camera.capture()
+
+        print("smile :)")
+
+    def select_output_folder(self):
+        """
+        Opens a file dialog to select the output folder for saving images.
+        """
+        self.output_path = filedialog.askdirectory(
+            title="Select Output Folder"
+        )
+        if self.output_path:
+            print(f"Selected output folder: {self.output_path}")
 
     def measure_snails(self):
         """
@@ -389,7 +418,7 @@ class SnailGUI:
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
 
-    def get_pos_key(self, _):
+    def get_pos_key(self, _event=None):
         """
         Returns the position key from the input field.
         """
@@ -414,7 +443,7 @@ class SnailGUI:
         return poskey
 
 
-    def delay_subsample_field_key_release(self, event=None):
+    def delay_subsample_field_key_release(self, _event=None):
         """
         Delays the execution of get_subsample to avoid excessive calls while typing.
         """
@@ -427,7 +456,7 @@ class SnailGUI:
         self.after_id = self.root.after(self.typing_delay, self.get_subsample)
 
 
-    def get_subsample(self, event=None):
+    def get_subsample(self, _event=None):
         """
         Returns the subsample from the input field.
         """
@@ -453,7 +482,7 @@ class SnailGUI:
 
             return subsample_float
 
-    def get_project(self, event=None):
+    def get_project(self, _event=None):
         """
         Returns the project from the input field.
         """
@@ -472,7 +501,7 @@ class SnailGUI:
 
             return project
 
-    def get_species(self, event=None):
+    def get_species(self, _event=None):
         """
         Returns the species from the input field.
         """
@@ -490,7 +519,7 @@ class SnailGUI:
                 self.species = species
             return species
 
-    def get_analyst(self, event=None):
+    def get_analyst(self, _event=None):
         """
         Returns the analyst from the input field.
         """
@@ -508,8 +537,8 @@ class SnailGUI:
                 self.analyst = analyst
 
             return analyst
-     
-    def get_year(self, event=None):
+
+    def get_year(self, _event=None):
         """
         Returns the year from the input field.
         """
@@ -528,7 +557,7 @@ class SnailGUI:
 
             return year
 
-    def get_lab_method_code(self, event=None):
+    def get_lab_method_code(self, _event=None):
         """
         Returns the lab method code from the input field.
         """
@@ -557,7 +586,7 @@ class SnailGUI:
         - instances (list of dict): List of dictionaries, each representing an instance.
         """
 
-        save_file_path = filedialog.askdirectory(
+        self.output_path = filedialog.askdirectory(
             title="Select Directory to Save CSV")
 
         # Define the fieldnames for the CSV
@@ -583,7 +612,7 @@ class SnailGUI:
 
 
         # Open the CSV file for writing
-        with open(os.path.join(save_file_path, filename),
+        with open(os.path.join(self.output_path, filename),
                    mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -607,7 +636,7 @@ class SnailGUI:
                 }
                 writer.writerow(row)
 
-        messagebox.showinfo("info", f"output writen to {os.path.join(save_file_path, filename)}")
+        messagebox.showinfo("info", f"output writen to {os.path.join(self.output_path, filename)}")
 
 if __name__ == "__main__":
     root = tk.Tk()
