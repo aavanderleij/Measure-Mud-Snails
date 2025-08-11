@@ -22,6 +22,8 @@ class Camera:
 
         self.capture_command = "Capture"  # Default capture command
 
+        print("Initializing digiCamControl...")
+
         # Check if file path exists
         if os.path.exists(exe_dir + r"/CameraControlRemoteCmd.exe"):
             self.exe_dir = exe_dir
