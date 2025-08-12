@@ -11,6 +11,7 @@ import csv
 from datetime import datetime
 import glob
 import os
+import subprocess
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
@@ -32,6 +33,7 @@ class SnailGUI:
 
         # Camera
         self.camera = Camera()
+        self.camera.set_image_name("raw_snail_image")
         self.output_path = os.path.join(os.getcwd(), "output")
 
         self.file_path = None
@@ -146,6 +148,7 @@ class SnailGUI:
         self.project_entry = tk.Entry(self.input_data_frame)
         self.project_entry.bind("<KeyRelease>", self.get_project)
         self.project_entry.insert(0, "SIBES")  # Default
+        self.get_project()
         self.project_entry.grid(row=2, column=1, sticky="ew")
 
         self.species_label = tk.Label(self.input_data_frame, text="Species:")
@@ -153,6 +156,7 @@ class SnailGUI:
         self.species_entry = tk.Entry(self.input_data_frame)
         self.species_entry.bind("<KeyRelease>", self.get_species)
         self.species_entry.insert(0, "Peringia")  # Default
+        self.get_species()
         self.species_entry.grid(row=3, column=1, sticky="ew")
 
 
@@ -173,6 +177,7 @@ class SnailGUI:
         self.lab_method_code_entry = tk.Entry(self.input_data_frame)
         self.lab_method_code_entry.bind("<KeyRelease>", self.get_lab_method_code)
         self.lab_method_code_entry.insert(0, 19) # Default
+        self.get_lab_method_code()
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
         # Add buttons
@@ -209,6 +214,7 @@ class SnailGUI:
         if self.file_path:
             print(f"Selected file: {self.file_path}")
             try:
+                # TODO dupicate code?
                 img = Image.open(self.file_path)
                 # set original_loaded_image to the full unedited resolution image
                 self.original_loaded_image = cv2.imread(self.file_path)
@@ -232,13 +238,14 @@ class SnailGUI:
         Opens a file dialog to select the latest image
         and displays it in the GUI in the original image frame.
         """
-        folder_path = os.path.dirname(self.file_path)
-        list_of_files = glob.glob(os.path.join(folder_path, '*.jpg'))
+
+        list_of_files = glob.glob(os.path.join(self.output_path, '*.jpg'))
         latest_file = max(list_of_files, key=os.path.getctime)
 
         self.file_path = latest_file
         print(f"Selected latest file: {self.file_path}")
         try:
+            # TODO move to own function
             img = Image.open(self.file_path)
             # set original_loaded_image to the full unedited resolution image
             self.original_loaded_image = cv2.imread(self.file_path)
@@ -263,7 +270,17 @@ class SnailGUI:
 
         self.camera.set_folder(self.output_path)
 
-        self.camera.capture()
+        try:
+            self.camera.capture()
+        except subprocess.CalledProcessError:
+            messagebox.showerror("Error", "Failed to capture image. "
+                                          "Please ensure digiCamControl is open "
+                                          "and camera is connected.")
+            return
+
+
+        self.select_latest_image()
+
 
         print("smile :)")
 
@@ -314,6 +331,7 @@ class SnailGUI:
         )
 
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        # TODO dupicate code?
         img_pil = Image.fromarray(self.annotated_image_rgb)
         img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
@@ -333,6 +351,8 @@ class SnailGUI:
         )
         if annotated_image is None:
             return
+
+        # TODO duplicate code
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(self.annotated_image_rgb)
         img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
@@ -411,6 +431,7 @@ class SnailGUI:
             draw_measurements=self.draw_measurements_var.get(),
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
+        # TODO dupicate code?
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(self.annotated_image_rgb)
         img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
@@ -575,6 +596,13 @@ class SnailGUI:
                 self.lab_method_code = lab_method_code
 
             return lab_method_code
+
+    def check_field_entries(self):
+        """
+        funtions that checks all entry fields
+        """
+        # TODO make check_field_entries
+        pass
 
     def write_measurements_to_csv(self):
         """
