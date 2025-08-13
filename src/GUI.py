@@ -331,14 +331,20 @@ class SnailGUI:
         )
 
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        # TODO dupicate code?
-        img_pil = Image.fromarray(self.annotated_image_rgb)
+
+        self.set_processed_image(self.annotated_image_rgb)
+
+        self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
+    
+    def set_processed_image(self, image):
+        """
+        Sets the processed image for display in right panel.
+        """
+        img_pil = Image.fromarray(image)
         img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
-
-        self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
 
     def update_single_snail_display(self):
         """
@@ -352,13 +358,8 @@ class SnailGUI:
         if annotated_image is None:
             return
 
-        # TODO duplicate code
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(self.annotated_image_rgb)
-        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
-        img_tk = ImageTk.PhotoImage(img_pil)
-        self.processed_label.config(image=img_tk, text="")
-        self.processed_label.image = img_tk
+        self.set_processed_image(self.annotated_image_rgb)
         self.snail_id_entry.delete(0, tk.END)
         self.snail_id_entry.insert(0, str(snail_id))
 
@@ -431,13 +432,9 @@ class SnailGUI:
             draw_measurements=self.draw_measurements_var.get(),
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
-        # TODO dupicate code?
+
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(self.annotated_image_rgb)
-        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
-        img_tk = ImageTk.PhotoImage(img_pil)
-        self.processed_label.config(image=img_tk, text="")
-        self.processed_label.image = img_tk
+        self.set_processed_image(self.annotated_image_rgb)
 
     def get_pos_key(self, _event=None):
         """
@@ -597,12 +594,6 @@ class SnailGUI:
 
             return lab_method_code
 
-    def check_field_entries(self):
-        """
-        funtions that checks all entry fields
-        """
-        # TODO make check_field_entries
-        pass
 
     def write_measurements_to_csv(self):
         """
@@ -664,7 +655,8 @@ class SnailGUI:
                 }
                 writer.writerow(row)
 
-        messagebox.showinfo("info", f"output writen to {os.path.join(self.output_path, filename)}")
+        messagebox.showinfo("info", f"output writen to: \n \
+                            {os.path.join(self.output_path, filename)}")
 
 if __name__ == "__main__":
     root = tk.Tk()
