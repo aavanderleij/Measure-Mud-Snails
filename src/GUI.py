@@ -43,6 +43,7 @@ class SnailGUI:
         self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
         self.reference_obj_width_mm = 10
+        self.reference_obj_length_mm = 12
         self.pos_key = None
         # Typing delay for input fields (in milliseconds)
         self.typing_delay = 500
@@ -314,7 +315,7 @@ class SnailGUI:
         self.inspector = None
         self.deleted_snails = []
 
-        ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_width_mm)
+        ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_length_mm, reference_width_mm=self.reference_obj_width_mm)
         pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
         # get the Pixels Per Metric form the image
@@ -659,6 +660,7 @@ class SnailGUI:
                             {os.path.join(self.output_path, filename)}")
 
 if __name__ == "__main__":
+    print("starting GUI...")
     root = tk.Tk()
     app = SnailGUI(root)
     root.mainloop()
