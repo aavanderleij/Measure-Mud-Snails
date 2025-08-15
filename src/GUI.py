@@ -34,10 +34,14 @@ class SnailGUI:
 
         
         # Define your default font
-        default_font = tkFont.Font(family="Avenir Next", size=12)
+        self.default_font = tkFont.Font(family="Avenir Next", size=12)
+        
+
+        self.style = ttk.Style(self.root)
 
         # Apply it globally to all widgets
-        self.root.option_add("*Font", default_font)
+        self.root.option_add("*Font", self.default_font)
+        self.style.configure("TButton", font=self.default_font)
 
 
         # Camera
@@ -205,7 +209,6 @@ class SnailGUI:
                                          command=self.select_image)
         self.select_img_btn.pack(side="left")
 
-        # ...rest of your buttons...
         self.process_btn = ttk.Button(self.left_frame, text="Select output folder",
                                   command=self.select_output_folder)
         self.process_btn.pack(pady=10)
