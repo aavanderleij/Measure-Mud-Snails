@@ -215,7 +215,6 @@ class SnailGUI:
         if self.file_path:
             print(f"Selected file: {self.file_path}")
             try:
-                # TODO dupicate code?
                 img = Image.open(self.file_path)
                 # set original_loaded_image to the full unedited resolution image
                 self.original_loaded_image = cv2.imread(self.file_path)
@@ -246,7 +245,6 @@ class SnailGUI:
         self.file_path = latest_file
         print(f"Selected latest file: {self.file_path}")
         try:
-            # TODO move to own function
             img = Image.open(self.file_path)
             # set original_loaded_image to the full unedited resolution image
             self.original_loaded_image = cv2.imread(self.file_path)
@@ -304,8 +302,6 @@ class SnailGUI:
             messagebox.showerror("Error", "No image loaded!")
             return
 
-        # Calculate pixels per metric using the reference object
-        #TODO show check to user if the reference object is correct
         #TODO check if this should be done here or in the SnailMeasurer class
 
 
@@ -342,7 +338,7 @@ class SnailGUI:
         Sets the processed image for display in right panel.
         """
         img_pil = Image.fromarray(image)
-        img_pil = img_pil.resize((800, 500), resample=Image.Resampling.LANCZOS)
+        img_pil = img_pil.resize((1000, 600), resample=Image.Resampling.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_label.config(image=img_tk, text="")
         self.processed_label.image = img_tk
