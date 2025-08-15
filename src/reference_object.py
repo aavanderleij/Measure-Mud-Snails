@@ -13,7 +13,7 @@ class ReferenceObject(ImageRuler):
     used for mesuring other objects.
     """
 
-    def __init__(self, reference_length_mm):
+    def __init__(self, reference_length_mm, reference_width_mm):
         """
         Initializes the ReferenceObject with a specified reference length in mm.
 
@@ -27,6 +27,7 @@ class ReferenceObject(ImageRuler):
         super().__init__()
         # Initialize the reference length in mm
         self.reference_length_mm = reference_length_mm
+        self.reference_width_mm = reference_width_mm
 
 
     def set_red_squire_ref_object_mask(self, image):
@@ -105,6 +106,13 @@ class ReferenceObject(ImageRuler):
             if self.is_reference_rectangle(cnt):
                 self.process_reference_rectangle(cnt, image)
 
+    def check_ref_object_width(self, width_pixels):
+        """
+        Check if the reference object is detected correctly by verifying if the length is as expected.
+        """
+
+        test_measurement = round(width_pixels / self.pixels_per_metric, 1)
+        assert test_measurement == self.reference_width_mm, f"Expected {self.reference_width_mm}, but got {test_measurement}"
 
     def calculate_pixels_per_metric(self, image):
         """
@@ -139,6 +147,10 @@ class ReferenceObject(ImageRuler):
         width = distance.euclidean(tl, tr)
         height = distance.euclidean(tr, br)
         # Use the smaller dimension as the reference width
-        ref_pixels = min(width, height)
+        ref_pixels = max(width, height)
         self.pixels_per_metric = ref_pixels / self.reference_length_mm
+        self.check_ref_object_width(width)
+
+        print(self.reference_length_mm)
+        print(self.reference_width_mm)
         return self.pixels_per_metric
