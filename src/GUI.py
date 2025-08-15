@@ -14,6 +14,7 @@ import os
 import subprocess
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import tkinter.font as tkFont
 from PIL import Image, ImageTk
 import cv2
 from src.reference_object import ReferenceObject
@@ -30,6 +31,14 @@ class SnailGUI:
         self.root.title("Snail Measurement GUI")
         self.root.geometry("1440x900")
         self.root.configure(bg="#d0e7f9")
+
+        
+        # Define your default font
+        default_font = tkFont.Font(family="Avenir Next", size=12)
+
+        # Apply it globally to all widgets
+        self.root.option_add("*Font", default_font)
+
 
         # Camera
         self.camera = Camera()
@@ -181,25 +190,32 @@ class SnailGUI:
         self.get_lab_method_code()
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
-        # Add buttons
-        self.take_photo_btn = ttk.Button(self.left_frame, text="Take Photo",
+        # Add buttons (horizontal row for photo/select image)
+        self.img_btn_row = ttk.Frame(self.left_frame)
+        self.img_btn_row.pack(pady=10)
+
+        self.take_photo_btn = ttk.Button(self.img_btn_row, text="Take Photo",
                                          command=self.capture)
-        self.take_photo_btn.pack(pady=10)
+        self.take_photo_btn.pack(side="left")
 
-        self.select_img_btn = ttk.Button(self.left_frame, text="Select Image",
+        self.or_label = ttk.Label(self.img_btn_row, text="  or  ")
+        self.or_label.pack(side="left")
+
+        self.select_img_btn = ttk.Button(self.img_btn_row, text="Select Image",
                                          command=self.select_image)
-        self.select_img_btn.pack(pady=10)
+        self.select_img_btn.pack(side="left")
 
+        # ...rest of your buttons...
         self.process_btn = ttk.Button(self.left_frame, text="Select output folder",
-                                      command=self.select_output_folder)
+                                  command=self.select_output_folder)
         self.process_btn.pack(pady=10)
 
         self.save_btn = ttk.Button(self.left_frame, text="Save Measurements",
-                                   command=self.write_measurements_to_csv)
+                               command=self.write_measurements_to_csv)
         self.save_btn.pack(pady=10)
 
         self.plot_btn = ttk.Button(self.left_frame, text="View as Plot",
-                                   command=self.view_image_as_plot)
+                               command=self.view_image_as_plot)
         self.plot_btn.pack(pady=10)
 
     def select_image(self):
@@ -311,7 +327,8 @@ class SnailGUI:
         self.inspector = None
         self.deleted_snails = []
 
-        ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_length_mm, reference_width_mm=self.reference_obj_width_mm)
+        ref_obj = ReferenceObject(reference_length_mm=self.reference_obj_length_mm,
+                                   reference_width_mm=self.reference_obj_width_mm)
         pixels_per_metric = ref_obj.calculate_pixels_per_metric(self.original_loaded_image.copy())
 
         # get the Pixels Per Metric form the image
@@ -332,7 +349,7 @@ class SnailGUI:
         self.set_processed_image(self.annotated_image_rgb)
 
         self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
-    
+
     def set_processed_image(self, image):
         """
         Sets the processed image for display in right panel.
