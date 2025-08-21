@@ -144,6 +144,10 @@ class SnailGUI:
                                       command=self.delete_snail)
         self.delete_btn.pack(side="left", padx=2)
 
+        self.undo_delete_btn = ttk.Button(self.nav_frame, text="Return snail", width=12,
+                                      command=self.return_snail)
+        self.undo_delete_btn.pack(side="left", padx=2)
+
         # Input fields for Sample data
         self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
         self.pos_key_label.grid(row=0, column=0, sticky="w")
@@ -429,13 +433,23 @@ class SnailGUI:
             if snail_id.isdigit():
                 snail_id = int(snail_id)
             if snail_id in self.detected_snails:
-                self.deleted_snails.append(snail_id)
+                self.deleted_snails.append(self.detected_snails[snail_id])
                 del self.detected_snails[snail_id]
                 # self.inspector.delete_snail(snail_id)
                 self.update_single_snail_display()
                 print(f"deleted_snails: {self.deleted_snails}")
             else:
                 messagebox.showwarning("Warning", f"Snail ID {snail_id} not found.")
+    
+    def return_snail(self):
+        """
+        Retruns a snail to the measured snails after its been deleted
+        """
+        if self.deleted_snails:
+            self.detected_snails[(self.deleted_snails[-1].snail_id)] = self.deleted_snails[-1]
+            print(f"added {self.deleted_snails[-1]} back")
+            self.deleted_snails.pop(-1)
+
 
     def update_processed_image(self):
         """
