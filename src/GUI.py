@@ -480,11 +480,10 @@ class SnailGUI:
             if not poskey.isdigit():
                 self.pos_key_entry.config(bg="red")
                 return None
-            # check if poskey is 4 digits long
-            elif len(poskey) > 4:
-                self.pos_key_entry.config(bg="red")
+            # # check if poskey is 4 digits long
+            # elif len(poskey) > 4:
+            #     self.pos_key_entry.config(bg="red")
 
-                return None
             else:
                 self.pos_key_entry.config(bg="white")
                 self.pos_key = poskey
