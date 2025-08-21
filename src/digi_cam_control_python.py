@@ -2,6 +2,8 @@
 Simple python class to use digiCamControl via the single command system to control your camera.
 Digicamcontrol (https://digicamcontrol.com/) needs to be installed.
 For documentation please visit https://github.com/Eagleshot/digiCamControlPython
+
+__author__ = Eagleshot
 """
 import os
 import subprocess
