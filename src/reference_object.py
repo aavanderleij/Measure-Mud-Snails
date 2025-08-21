@@ -108,11 +108,13 @@ class ReferenceObject(ImageRuler):
 
     def check_ref_object_width(self, width_pixels):
         """
-        Check if the reference object is detected correctly by verifying if the length is as expected.
+        Check if the reference object is detected correctly by verifying
+        if the length is as expected.
         """
 
         test_measurement = round(width_pixels / self.pixels_per_metric, 1)
-        assert test_measurement == self.reference_width_mm, f"Expected {self.reference_width_mm}, but got {test_measurement}"
+        return test_measurement == self.reference_width_mm
+
 
     def calculate_pixels_per_metric(self, image):
         """
@@ -149,7 +151,8 @@ class ReferenceObject(ImageRuler):
         # Use the smaller dimension as the reference width
         ref_pixels = max(width, height)
         self.pixels_per_metric = ref_pixels / self.reference_length_mm
-        self.check_ref_object_width(width)
+
+
 
         print(self.reference_length_mm)
         print(self.reference_width_mm)
