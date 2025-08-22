@@ -645,6 +645,7 @@ class SnailGUI:
         ]
 
         filename=f"{self.pos_key}_snail_measurements.csv"
+        outfile = os.path.join(self.output_path, filename)
 
         if self.pos_key is None:
             messagebox.showerror("Error", "Pos Key is required to save measurements.")
@@ -659,10 +660,16 @@ class SnailGUI:
             messagebox.showerror("Error", "Analyst is required to save measurements.")
             return
 
+        
+        # Check if file exists
+        if os.path.exists(outfile):
+            overwrite = messagebox.askyesno("File Exists", f"{filename} already exists. Overwrite?")
+            if not overwrite:
+                return  # User chose not to overwrite
+
 
         # Open the CSV file for writing
-        with open(os.path.join(self.output_path, filename),
-                   mode='w', newline='', encoding='utf-8') as csvfile:
+        with open(outfile, mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
