@@ -630,23 +630,28 @@ class SnailGUI:
         Writes a single sample and its instances to a CSV file.
 
         Parameters:
-        - filename (str): The name of the output CSV file.
-        - sample_data (dict): Dictionary containing sample-level data.
-        - instances (list of dict): List of dictionaries, each representing an instance.
         """
 
         self.output_path = filedialog.askdirectory(
             title="Select Directory to Save CSV")
 
-        # Define the fieldnames for the CSV
-        fieldnames = [
+        # Define the fieldnames for the CSV containing the raw mesurments
+        fieldnames_raw = [
             "Pos_key", "Species", "Subsample", "Analyst", "Project",
             "Year", "Time of measurement", "Lab_method_code", "ID", "Length(mm)", "Width(mm)"
         ]
 
-        filename=f"{self.pos_key}_snail_measurements.csv"
-        outfile = os.path.join(self.output_path, filename)
+        # Define the fieldnames the binned measurments
+        fieldnames_bin = [
+            "Pos_key", "Species", "Subsample", "Analyst", "Project",
+            "Year", "Time of measurement", "Lab_method_code", "Size", "N_snails_size"]
 
+        filename_raw=f"{self.pos_key}_snail_measurements_raw.csv"
+        filename_das = f"{self.pos_key}_snail_measurements.csv"
+        outfile_raw = os.path.join(self.output_path, filename_raw)
+        outfile_bin = os.path.join(self.output_path, filename_das)
+
+        # check if all nessesery input fields have been filled in
         if self.pos_key is None:
             messagebox.showerror("Error", "Pos Key is required to save measurements.")
             return
@@ -660,17 +665,18 @@ class SnailGUI:
             messagebox.showerror("Error", "Analyst is required to save measurements.")
             return
 
-        
-        # Check if file exists
-        if os.path.exists(outfile):
-            overwrite = messagebox.askyesno("File Exists", f"{filename} already exists. Overwrite?")
-            if not overwrite:
-                return  # User chose not to overwrite
 
+
+        # Check if file exists
+        if os.path.exists(outfile_raw):
+            overwrite = messagebox.askyesno("File Exists",
+                                            f"CSV files for sample {self.pos_key} already exists. Overwrite?")
+            if not overwrite:
+                return
 
         # Open the CSV file for writing
-        with open(outfile, mode='w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        with open(outfile_raw, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames_raw)
             writer.writeheader()
 
             # Write each instance with the sample-level data
@@ -692,8 +698,34 @@ class SnailGUI:
                 }
                 writer.writerow(row)
 
+        bin_measurments = self.snail_measurer.bin_measuments(snails=self.detected_snails)
+
+        # Open the CSV file for writing
+        with open(outfile_bin, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames_bin)
+            writer.writeheader()
+
+            # Write each instance with the sample-level data
+
+            for bin_size in bin_measurments:
+                n_snails = bin_measurments[bin_size]
+                row = {
+                    "Pos_key": self.pos_key,
+                    "Species": self.species,
+                    "Subsample": self.subsample,
+                    "Analyst": self.analyst,
+                    "Project": self.project,
+                    "Year": self.year,
+                    "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Lab_method_code": self.lab_method_code,
+                    "Size": bin_size,
+                    "N_snails_size": n_snails,
+                }
+                writer.writerow(row)
+
+
         messagebox.showinfo("info", f"output writen to: \n \
-                            {os.path.join(self.output_path, filename)}")
+                            {os.path.join(outfile_bin)}")
 
 if __name__ == "__main__":
     print("starting GUI...")
