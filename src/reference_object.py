@@ -113,6 +113,7 @@ class ReferenceObject(ImageRuler):
         """
 
         test_measurement = round(width_pixels / self.pixels_per_metric, 1)
+        
         return test_measurement == self.reference_width_mm
 
 
@@ -138,6 +139,8 @@ class ReferenceObject(ImageRuler):
                     max_area = area
                     best_cnt = cnt
                     print('Found reference rectangle with area:', area)
+        
+        self.detect_and_annotate(image=image)
 
         self.show_image(image, title="Reference Rectangle Detection")
         if best_cnt is None:
@@ -151,9 +154,11 @@ class ReferenceObject(ImageRuler):
         # Use the smaller dimension as the reference width
         ref_pixels = max(width, height)
         self.pixels_per_metric = ref_pixels / self.reference_length_mm
+        test_measurement = round(width / self.pixels_per_metric, 1)
 
 
 
         print(self.reference_length_mm)
         print(self.reference_width_mm)
+        print(test_measurement)
         return self.pixels_per_metric
