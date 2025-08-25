@@ -160,6 +160,33 @@ class SnailMeasurer(ImageRuler):
             return image
 
     
+    def bin_measuments(self, snails, attribute="length"):
+        """
+        Takes all measurements and groups them in bins to the closest half millimeter.
+        Args:
+            snails (dict): Dictionary of SnailObject instances.
+            attribute (str): "length" or "width" to bin.
+        Returns:
+            dict: {bin_size: count}
+        """
+        values = [getattr(snail, attribute) for snail in snails.values()]
+        # Bin to nearest 0.5 mm
+        bins = [round(v * 2) / 2 for v in values]
+        # Count occurrences
+        bin_counts = {}
+        for b in bins:
+            bin_counts[b] = bin_counts.get(b, 0) + 1
+        # Sort bins descending
+        sorted_bins = sorted(bin_counts.items(), reverse=True)
+        print("size\tN in bin")
+        for size, count in sorted_bins:
+            print(f"{size}\t{count}")
+        print(dict(sorted_bins))
+        return dict(sorted_bins)
+
+
+
+
     def separate_touching_snails(self, mask):
         """
         Separates touching snails using distance transform and watershed.
