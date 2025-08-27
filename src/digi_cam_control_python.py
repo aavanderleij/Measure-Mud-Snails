@@ -49,8 +49,12 @@ class Camera:
         r = self.run_cmd(self.capture_command + " " + location)
         if r == 0:
             print("Captured image.")
+            return self.__get_cmd("lastcaptured")
+        else:
+            return -1
+        
 
-        return self.__get_cmd("lastcaptured")
+        
 
     # %% Folder
     def set_folder(self, folder: str):

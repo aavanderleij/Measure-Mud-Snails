@@ -32,10 +32,10 @@ class SnailGUI:
         self.root.geometry("1440x900")
         self.root.configure(bg="#d0e7f9")
 
-        
+
         # Define your default font
         self.default_font = tkFont.Font(family="Avenir Next", size=12)
-        
+
 
         self.style = ttk.Style(self.root)
 
@@ -291,17 +291,17 @@ class SnailGUI:
         """
 
         self.camera.set_folder(self.output_path)
-
-        try:
-            self.camera.capture()
-        except subprocess.CalledProcessError:
+        succes_capture = self.camera.capture()
+        if succes_capture != -1:
+            self.select_latest_image()
+        else:
             messagebox.showerror("Error", "Failed to capture image. "
                                           "Please ensure digiCamControl is open "
                                           "and camera is connected.")
             return
 
 
-        self.select_latest_image()
+        
 
 
         print("smile :)")
@@ -440,7 +440,7 @@ class SnailGUI:
                 print(f"deleted_snails: {self.deleted_snails}")
             else:
                 messagebox.showwarning("Warning", f"Snail ID {snail_id} not found.")
-    
+
     def return_snail(self):
         """
         Retruns a snail to the measured snails after its been deleted
@@ -480,9 +480,6 @@ class SnailGUI:
             if not poskey.isdigit():
                 self.pos_key_entry.config(bg="red")
                 return None
-            # # check if poskey is 4 digits long
-            # elif len(poskey) > 4:
-            #     self.pos_key_entry.config(bg="red")
 
             else:
                 self.pos_key_entry.config(bg="white")
