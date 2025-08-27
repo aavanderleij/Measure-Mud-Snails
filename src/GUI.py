@@ -52,6 +52,7 @@ class SnailGUI:
         self.file_path = None
         self.original_loaded_image = None
         self.annotated_image_rgb = None
+        self.full_annotated_image_rgb = None
         self.detected_snails = {}
         self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
@@ -218,7 +219,7 @@ class SnailGUI:
         self.process_btn.pack(pady=10)
 
         self.save_btn = ttk.Button(self.left_frame, text="Save Measurements",
-                               command=self.write_measurements_to_csv)
+                               command=self.save_output)
         self.save_btn.pack(pady=10)
 
         self.plot_btn = ttk.Button(self.left_frame, text="View as Plot",
@@ -294,17 +295,14 @@ class SnailGUI:
         succes_capture = self.camera.capture()
         if succes_capture != -1:
             self.select_latest_image()
+            print("Say Snails! :)")
+
         else:
             messagebox.showerror("Error", "Failed to capture image. "
                                           "Please ensure digiCamControl is open "
                                           "and camera is connected.")
-            return
-
-
         
-
-
-        print("smile :)")
+        return
 
     def select_output_folder(self):
         """
@@ -324,8 +322,6 @@ class SnailGUI:
         if self.original_loaded_image is None:
             messagebox.showerror("Error", "No image loaded!")
             return
-
-        #TODO check if this should be done here or in the SnailMeasurer class
 
 
         # reset the detected snails
@@ -351,7 +347,9 @@ class SnailGUI:
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
 
+        
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        self.full_annotated_image_rgb = self.annotated_image_rgb.copy()
 
         self.set_processed_image(self.annotated_image_rgb)
 
@@ -622,15 +620,49 @@ class SnailGUI:
             return lab_method_code
 
 
-    def write_measurements_to_csv(self):
+    def save_output(self):
+        """
+        save output of the aplication
+        """
+
+        self.output_path = filedialog.askdirectory(
+            title="Select Directory to Save Output")
+
+        # save images
+        jpg_image_dir = os.path.join(self.output_path,
+                                     "original_images")
+        annotated_image_dir =os.path.join(self.output_path,
+                                          "annotated_images")
+
+
+        raw_csv_dir = os.path.join(self.output_path, "raw_measurments")
+        binned_csv_dir = os.path.join(self.output_path, "binned_measurments")
+
+        self.write_measurements_to_csv(raw_csv_dir=raw_csv_dir,
+                                       binned_csv_dir=binned_csv_dir)
+
+
+        os.makedirs(jpg_image_dir, exist_ok=True)
+        os.makedirs(annotated_image_dir, exist_ok=True)
+        
+        original_img = os.path.join(jpg_image_dir, f"{self.pos_key}_{self.year}_original.jpg")
+        annotated_image = os.path.join(annotated_image_dir, f"{self.pos_key}_{self.year}_annotated.jpg")
+        
+        
+        # save images
+        cv2.imwrite(original_img, cv2.cvtColor(self.original_loaded_image, cv2.COLOR_RGB2BGR) )
+        cv2.imwrite(annotated_image,cv2.cvtColor(self.full_annotated_image_rgb, cv2.COLOR_RGB2BGR) )
+
+
+    def write_measurements_to_csv(self, raw_csv_dir, binned_csv_dir):
         """
         Writes a single sample and its instances to a CSV file.
 
         Parameters:
         """
 
-        self.output_path = filedialog.askdirectory(
-            title="Select Directory to Save CSV")
+        os.makedirs(raw_csv_dir, exist_ok=True)
+        os.makedirs(binned_csv_dir, exist_ok=True)
 
         # Define the fieldnames for the CSV containing the raw mesurments
         fieldnames_raw = [
@@ -643,10 +675,12 @@ class SnailGUI:
             "Pos_key", "Species", "Subsample", "Analyst", "Project",
             "Year", "Time of measurement", "Lab_method_code", "Size", "N_snails_size"]
 
-        filename_raw=f"{self.pos_key}_snail_measurements_raw.csv"
-        filename_das = f"{self.pos_key}_snail_measurements.csv"
-        outfile_raw = os.path.join(self.output_path, filename_raw)
-        outfile_bin = os.path.join(self.output_path, filename_das)
+        raw_measurments_csv = os.path.join(raw_csv_dir,
+                                          f"{self.pos_key}_{self.year}_raw.csv")
+
+        bin_measurments_csv = os.path.join(binned_csv_dir,
+                                          f"{self.pos_key}_{self.year}_bin.csv")
+
 
         # check if all nessesery input fields have been filled in
         if self.pos_key is None:
@@ -665,14 +699,14 @@ class SnailGUI:
 
 
         # Check if file exists
-        if os.path.exists(outfile_raw):
+        if os.path.exists(raw_measurments_csv):
             overwrite = messagebox.askyesno("File Exists",
                                             f"CSV files for sample {self.pos_key} already exists. Overwrite?")
             if not overwrite:
                 return
 
         # Open the CSV file for writing
-        with open(outfile_raw, mode='w', newline='', encoding='utf-8') as csvfile:
+        with open(raw_measurments_csv, mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames_raw)
             writer.writeheader()
 
@@ -698,7 +732,7 @@ class SnailGUI:
         bin_measurments = self.snail_measurer.bin_measuments(snails=self.detected_snails)
 
         # Open the CSV file for writing
-        with open(outfile_bin, mode='w', newline='', encoding='utf-8') as csvfile:
+        with open(bin_measurments_csv, mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames_bin)
             writer.writeheader()
 
@@ -722,7 +756,7 @@ class SnailGUI:
 
 
         messagebox.showinfo("info", f"output writen to: \n \
-                            {os.path.join(outfile_bin)}")
+                            {os.path.join(binned_csv_dir)}")
 
 if __name__ == "__main__":
     print("starting GUI...")
