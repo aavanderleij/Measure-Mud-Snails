@@ -88,8 +88,6 @@ class SnailGUI:
                                            text="Summary Sample",
                                            width=250, height=150)
         self.sample_summary_frame.pack(fill="x", pady=10)
-        self.image_label = tk.Label(self.sample_summary_frame, text="Summary")
-        self.image_label.pack(expand=True)
 
         self.summary_label = tk.Label(self.sample_summary_frame, text="", justify="left", anchor="w")
         self.summary_label.pack(fill="x", padx=5, pady=5)
@@ -246,10 +244,6 @@ class SnailGUI:
                 img = Image.open(self.file_path)
                 # set original_loaded_image to the full unedited resolution image
                 self.original_loaded_image = cv2.imread(self.file_path)
-                img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
-                img_tk = ImageTk.PhotoImage(img)
-                self.image_label.config(image=img_tk, text="")
-                self.image_label.image = img_tk
 
                 try:
                     self.measure_snails()
@@ -276,11 +270,6 @@ class SnailGUI:
             img = Image.open(self.file_path)
             # set original_loaded_image to the full unedited resolution image
             self.original_loaded_image = cv2.imread(self.file_path)
-            img = img.resize((300, 200), resample=Image.Resampling.LANCZOS)
-            img_tk = ImageTk.PhotoImage(img)
-            self.image_label.config(image=img_tk, text="")
-            self.image_label.image = img_tk
-
             try:
                 self.measure_snails()
             except Exception as e:
