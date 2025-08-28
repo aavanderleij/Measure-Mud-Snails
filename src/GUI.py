@@ -17,6 +17,7 @@ from tkinter import ttk, filedialog, messagebox
 import tkinter.font as tkFont
 from PIL import Image, ImageTk
 import cv2
+import numpy as np
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
 from src.snail_inspect_window import SnailInspectorCore
@@ -83,12 +84,15 @@ class SnailGUI:
         self.left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
         # Original Image section
-        self.original_image_frame = ttk.LabelFrame(self.left_frame,
-                                                   text="Image Sample",
-                                                    width=250, height=150)
-        self.original_image_frame.pack(fill="x", pady=10)
-        self.image_label = tk.Label(self.original_image_frame, text="original image")
+        self.sample_summary_frame = ttk.LabelFrame(self.left_frame,
+                                           text="Summary Sample",
+                                           width=250, height=150)
+        self.sample_summary_frame.pack(fill="x", pady=10)
+        self.image_label = tk.Label(self.sample_summary_frame, text="Summary")
         self.image_label.pack(expand=True)
+
+        self.summary_label = tk.Label(self.sample_summary_frame, text="", justify="left", anchor="w")
+        self.summary_label.pack(fill="x", padx=5, pady=5)
 
         # Tools/Filters section
         self.tools_frame = ttk.LabelFrame(self.left_frame,
@@ -355,6 +359,8 @@ class SnailGUI:
 
         self.inspector = SnailInspectorCore(self.original_loaded_image, self.detected_snails)
 
+        self.update_sample_summary()
+
     def set_processed_image(self, image):
         """
         Sets the processed image for display in right panel.
@@ -382,11 +388,31 @@ class SnailGUI:
         self.snail_id_entry.delete(0, tk.END)
         self.snail_id_entry.insert(0, str(snail_id))
 
+    def update_sample_summary(self):
+        """
+        Updates the sample summary label with number of detections,
+        max, min, and median length.
+        """
+        if not self.detected_snails:
+            self.summary_label.config(text="No detections yet.")
+            return
+        lengths = [snail.length for snail in self.detected_snails.values() if hasattr(snail, "length")]
+        if not lengths:
+            self.summary_label.config(text="No length data.")
+            return
+        summary = (
+            f"Detections: {len(lengths)}\n"
+            f"Max length: {max(lengths):.2f} mm\n"
+            f"Min length: {min(lengths):.2f} mm\n"
+            f"Median length: {np.median(lengths):.2f} mm"
+        )
+        self.summary_label.config(text=summary)
+
     def view_image_as_plot(self):
         """
         funtion for vieuw as plot button.
         Allowes the user to open the processed image as a matplotlib plot for
-        easier zoom functionality
+        zoom functionality
         """
         self.snail_measurer.show_image(cv2.cvtColor(self.annotated_image_rgb, cv2.COLOR_BGR2RGB))
 
@@ -436,6 +462,7 @@ class SnailGUI:
                 # self.inspector.delete_snail(snail_id)
                 self.update_single_snail_display()
                 print(f"deleted_snails: {self.deleted_snails}")
+                self.update_sample_summary()
             else:
                 messagebox.showwarning("Warning", f"Snail ID {snail_id} not found.")
 
