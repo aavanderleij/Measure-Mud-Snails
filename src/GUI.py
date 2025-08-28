@@ -388,7 +388,7 @@ class SnailGUI:
         Allowes the user to open the processed image as a matplotlib plot for
         easier zoom functionality
         """
-        self.snail_measurer.show_image(self.annotated_image_rgb)
+        self.snail_measurer.show_image(cv2.cvtColor(self.annotated_image_rgb, cv2.COLOR_BGR2RGB))
 
     def prev_snail(self):
         """
@@ -647,12 +647,14 @@ class SnailGUI:
         
         original_img = os.path.join(jpg_image_dir, f"{self.pos_key}_{self.year}_original.jpg")
         annotated_image = os.path.join(annotated_image_dir, f"{self.pos_key}_{self.year}_annotated.jpg")
-        
-        
+
+
         # save images
         cv2.imwrite(original_img, cv2.cvtColor(self.original_loaded_image, cv2.COLOR_RGB2BGR) )
         cv2.imwrite(annotated_image,cv2.cvtColor(self.full_annotated_image_rgb, cv2.COLOR_RGB2BGR) )
 
+        # Remove pos_key enterd in entry field to prevent overwrights
+        self.pos_key_entry.delete(0, tk.END)
 
     def write_measurements_to_csv(self, raw_csv_dir, binned_csv_dir):
         """
