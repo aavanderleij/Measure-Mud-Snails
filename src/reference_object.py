@@ -158,7 +158,7 @@ class ReferenceObject(ImageRuler):
 
 
 
-        print(self.reference_length_mm)
-        print(self.reference_width_mm)
-        print(test_measurement)
+        print(f"Refrence Length: {self.reference_length_mm}")
+        print(f"Refrence Width: {self.reference_width_mm}")
+        print(f"Caluclated Width: {test_measurement}")
         return self.pixels_per_metric
