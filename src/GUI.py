@@ -11,7 +11,6 @@ import csv
 from datetime import datetime
 import glob
 import os
-import subprocess
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import tkinter.font as tkFont
@@ -63,7 +62,7 @@ class SnailGUI:
         # Typing delay for input fields (in milliseconds)
         self.typing_delay = 500
         self.after_id = None
-        self.inspector = None  # Will be set after detection
+        self.inspector = None
         self.deleted_snails = []
 
         self.species = None
@@ -89,7 +88,8 @@ class SnailGUI:
                                            width=250, height=150)
         self.sample_summary_frame.pack(fill="x", pady=10)
 
-        self.summary_label = tk.Label(self.sample_summary_frame, text="", justify="left", anchor="w")
+        self.summary_label = tk.Label(self.sample_summary_frame, text="",
+                                      justify="left", anchor="w")
         self.summary_label.pack(fill="x", padx=5, pady=5)
 
         # Tools/Filters section
@@ -98,10 +98,6 @@ class SnailGUI:
                                             width=250, height=200)
         self.tools_frame.pack(fill="x", pady=10)
 
-        # Sample data
-        self.input_data_frame = ttk.LabelFrame(self.left_frame, text="Sample data",
-                                               width=250, height=100)
-        self.input_data_frame.pack(fill="x", pady=10)
 
         # Checkbuttons for contour options
         self.draw_contours_var = tk.BooleanVar(value=True)
@@ -151,6 +147,11 @@ class SnailGUI:
                                       command=self.return_snail)
         self.undo_delete_btn.pack(side="left", padx=2)
 
+        # Sample data
+        self.input_data_frame = ttk.LabelFrame(self.left_frame, text="Sample data",
+                                               width=250, height=100)
+        self.input_data_frame.pack(fill="x", pady=10)
+
         # Input fields for Sample data
         self.pos_key_label = tk.Label(self.input_data_frame, text="Pos Key:")
         self.pos_key_label.grid(row=0, column=0, sticky="w")
@@ -180,7 +181,6 @@ class SnailGUI:
         self.get_species()
         self.species_entry.grid(row=3, column=1, sticky="ew")
 
-
         self.analyst_label = tk.Label(self.input_data_frame, text="Analyst:")
         self.analyst_label.grid(row=4, column=0, sticky="w")
         self.analyst_entry = tk.Entry(self.input_data_frame)
@@ -201,7 +201,7 @@ class SnailGUI:
         self.get_lab_method_code()
         self.lab_method_code_entry.grid(row=6, column=1, sticky="ew")
 
-        # Add buttons (horizontal row for photo/select image)
+        # Add buttons on left frame
         self.img_btn_row = ttk.Frame(self.left_frame)
         self.img_btn_row.pack(pady=10)
 
@@ -241,7 +241,6 @@ class SnailGUI:
         if self.file_path:
             print(f"Selected file: {self.file_path}")
             try:
-                img = Image.open(self.file_path)
                 # set original_loaded_image to the full unedited resolution image
                 self.original_loaded_image = cv2.imread(self.file_path)
 
@@ -267,7 +266,6 @@ class SnailGUI:
         self.file_path = latest_file
         print(f"Selected latest file: {self.file_path}")
         try:
-            img = Image.open(self.file_path)
             # set original_loaded_image to the full unedited resolution image
             self.original_loaded_image = cv2.imread(self.file_path)
             try:
@@ -294,7 +292,7 @@ class SnailGUI:
             messagebox.showerror("Error", "Failed to capture image. "
                                           "Please ensure digiCamControl is open "
                                           "and camera is connected.")
-        
+
         return
 
     def select_output_folder(self):
@@ -340,7 +338,6 @@ class SnailGUI:
             draw_bounding_box=self.draw_bounding_box_var.get()
         )
 
-        
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         self.full_annotated_image_rgb = self.annotated_image_rgb.copy()
 
@@ -385,7 +382,8 @@ class SnailGUI:
         if not self.detected_snails:
             self.summary_label.config(text="No detections yet.")
             return
-        lengths = [snail.length for snail in self.detected_snails.values() if hasattr(snail, "length")]
+        lengths = [snail.length for snail in self.detected_snails.values()
+                    if hasattr(snail, "length")]
         if not lengths:
             self.summary_label.config(text="No length data.")
             return
@@ -448,9 +446,8 @@ class SnailGUI:
             if snail_id in self.detected_snails:
                 self.deleted_snails.append(self.detected_snails[snail_id])
                 del self.detected_snails[snail_id]
-                # self.inspector.delete_snail(snail_id)
                 self.update_single_snail_display()
-                print(f"deleted_snails: {self.deleted_snails}")
+                # print(f"deleted_snails: {self.deleted_snails}")
                 self.update_sample_summary()
             else:
                 messagebox.showwarning("Warning", f"Snail ID {snail_id} not found.")
@@ -500,20 +497,6 @@ class SnailGUI:
                 self.pos_key = poskey
 
         return poskey
-
-
-    def delay_subsample_field_key_release(self, _event=None):
-        """
-        Delays the execution of get_subsample to avoid excessive calls while typing.
-        """
-
-        # if self.after_id exists
-        if self.after_id:
-            # cancel the previous after_id
-            self.root.after_cancel(self.after_id)
-        # set a new after_id with the function and typing delay
-        self.after_id = self.root.after(self.typing_delay, self.get_subsample)
-
 
     def get_subsample(self, _event=None):
         """
@@ -660,9 +643,10 @@ class SnailGUI:
 
         os.makedirs(jpg_image_dir, exist_ok=True)
         os.makedirs(annotated_image_dir, exist_ok=True)
-        
+
         original_img = os.path.join(jpg_image_dir, f"{self.pos_key}_{self.year}_original.jpg")
-        annotated_image = os.path.join(annotated_image_dir, f"{self.pos_key}_{self.year}_annotated.jpg")
+        annotated_image = os.path.join(annotated_image_dir,
+                                       f"{self.pos_key}_{self.year}_annotated.jpg")
 
 
         # save images
@@ -677,6 +661,8 @@ class SnailGUI:
         Writes a single sample and its instances to a CSV file.
 
         Parameters:
+        raw_csv_dir (str): Directory to save the raw measurements CSV.
+        binned_csv_dir (str): Directory to save the binned measurements CSV.
         """
 
         os.makedirs(raw_csv_dir, exist_ok=True)
@@ -714,12 +700,11 @@ class SnailGUI:
             messagebox.showerror("Error", "Analyst is required to save measurements.")
             return
 
-
-
         # Check if file exists
         if os.path.exists(raw_measurments_csv):
             overwrite = messagebox.askyesno("File Exists",
-                                            f"CSV files for sample {self.pos_key} already exists. Overwrite?")
+                                            f"CSV files for sample {self.pos_key} \
+                                              already exists. Overwrite?")
             if not overwrite:
                 return
 
