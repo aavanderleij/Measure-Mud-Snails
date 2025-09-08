@@ -187,7 +187,7 @@ class SnailGUI:
         self.analyst_entry.bind("<KeyRelease>", self.get_analyst)
         self.analyst_entry.grid(row=4, column=1, sticky="ew")
 
-        self.year_label = tk.Label(self.input_data_frame, text="Year:")
+        self.year_label = tk.Label(self.input_data_frame, text="Sampling Year:")
         self.year_label.grid(row=5, column=0, sticky="w")
         self.year_entry = tk.Entry(self.input_data_frame)
         self.year_entry.bind("<KeyRelease>", self.get_year)
