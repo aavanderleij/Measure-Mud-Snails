@@ -727,8 +727,8 @@ class SnailGUI:
                     "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "Lab_method_code": self.lab_method_code,
                     "ID": snail.snail_id,
-                    "Length(mm)": snail.length,
-                    "Width(mm)": snail.width
+                    "Length(mm)": round(snail.length, 2),
+                    "Width(mm)": round(snail.width, 2)
                 }
                 writer.writerow(row)
 
