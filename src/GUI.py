@@ -17,6 +17,8 @@ import tkinter.font as tkFont
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 from src.reference_object import ReferenceObject
 from src.snail_measurer import SnailMeasurer
 from src.snail_inspect_window import SnailInspectorCore
@@ -43,7 +45,6 @@ class SnailGUI:
         self.root.option_add("*Font", self.default_font)
         self.style.configure("TButton", font=self.default_font)
 
-
         # Camera
         self.camera = Camera()
         self.camera.set_image_name("raw_snail_image")
@@ -59,6 +60,7 @@ class SnailGUI:
         self.reference_obj_width_mm = 10
         self.reference_obj_length_mm = 12
         self.pos_key = None
+
         # Typing delay for input fields (in milliseconds)
         self.typing_delay = 500
         self.after_id = None
@@ -120,8 +122,14 @@ class SnailGUI:
         # Right panel for processed image
         self.right_frame = ttk.LabelFrame(self.root, text="Processed Image")
         self.right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
-        self.processed_label = tk.Label(self.right_frame, text="Processed image")
-        self.processed_label.pack(expand=True)
+
+        # Create canvas for image display
+        self.canvas_width = 1000
+        self.canvas_height = 600
+        self.processed_canvas = tk.Canvas(self.right_frame,
+                                          width=self.canvas_width, height=self.canvas_height)
+        self.processed_canvas.pack(expand=True, fill="both", padx=10, pady=10)
+
 
         # Navigation interface for single snail
         self.nav_frame = ttk.Frame(self.right_frame)
@@ -227,6 +235,7 @@ class SnailGUI:
         self.plot_btn = ttk.Button(self.left_frame, text="View as Plot",
                                command=self.view_image_as_plot)
         self.plot_btn.pack(pady=10)
+
 
     def select_image(self):
         """
@@ -349,13 +358,39 @@ class SnailGUI:
 
     def set_processed_image(self, image):
         """
-        Sets the processed image for display in right panel.
+        Sets the processed image for display in right panel canvas.
         """
         img_pil = Image.fromarray(image)
-        img_pil = img_pil.resize((1000, 600), resample=Image.Resampling.LANCZOS)
-        img_tk = ImageTk.PhotoImage(img_pil)
-        self.processed_label.config(image=img_tk, text="")
-        self.processed_label.image = img_tk
+        img_pil = img_pil.resize((self.canvas_width, self.canvas_height), resample=Image.Resampling.LANCZOS)
+        self.img_tk = ImageTk.PhotoImage(img_pil)
+        self.processed_canvas.create_image(0, 0, anchor="nw", image=self.img_tk)
+        self.processed_canvas.image = self.img_tk
+        self.processed_canvas.bind("<Button-1>", self.on_snail_click)
+
+
+    def on_snail_click(self, event):
+        """
+        Function for processing clicks on the canvas.
+        When a snail is clicked, it will be selected and the dislpay will be updated.
+        """
+
+        # caluclate scale 
+        orig_h, orig_w = self.original_loaded_image.shape[:2]
+        scale_x = self.canvas_width / orig_w
+        scale_y = self.canvas_height / orig_h
+
+        # snail bounding box is saved in original image pixel coordinates
+        # divide by scale to get point to match original image pixel coordinates
+        click_point = Point((event.x / scale_x),
+                            (event.y / scale_y))
+        for snail in self.detected_snails.values():
+            snail_bbx = Polygon(snail.bounding_box)
+            if snail_bbx.contains(click_point):
+                print (f"clicked on snail {snail}")
+                self.inspector.goto_snail(snail.snail_id)
+                self.update_single_snail_display()
+                return
+        
 
     def update_single_snail_display(self):
         """
