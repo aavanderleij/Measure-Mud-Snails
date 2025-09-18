@@ -787,14 +787,14 @@ class SnailGUI:
 
         # Define the fieldnames for the CSV containing the raw mesurments
         fieldnames_raw = [
-            "Pos_key", "Species", "Subsample", "Analyst", "Project",
-            "Year", "Time of measurement", "Lab_method_code", "ID", "Length(mm)", "Width(mm)"
+            "pos_key", "species", "subsample", "analyst", "project",
+            "year", "datetime", "lab_method_code", "id", "length_mm", "width_mm"
         ]
 
         # Define the fieldnames the binned measurments
         fieldnames_bin = [
-            "Pos_key", "Species", "Subsample", "Analyst", "Project",
-            "Year", "Time of measurement", "Lab_method_code", "Size", "N_snails_size"]
+            "pos_key", "species", "subsample", "analyst", "project",
+            "year", "datetime", "lab_method_code" "size", "n_snails_size"]
 
         raw_measurments_csv = os.path.join(raw_csv_dir,
                                           f"{self.pos_key}_{self.year}_raw.csv")
