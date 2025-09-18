@@ -8,7 +8,7 @@ display based on user input.
 It also includes input fields for sample data such as position key, subsample, project, species
 """
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 import glob
 import os
 import tkinter as tk
@@ -794,7 +794,7 @@ class SnailGUI:
         # Define the fieldnames the binned measurments
         fieldnames_bin = [
             "pos_key", "species", "subsample", "analyst", "project",
-            "year", "datetime", "lab_method_code" "size", "n_snails_size"]
+            "year", "datetime", "lab_method_code", "size", "n_snails_size"]
 
         raw_measurments_csv = os.path.join(raw_csv_dir,
                                           f"{self.pos_key}_{self.year}_raw.csv")
@@ -835,17 +835,17 @@ class SnailGUI:
             for snail_key in self.detected_snails:
                 snail = self.detected_snails[snail_key]
                 row = {
-                    "Pos_key": self.pos_key,
-                    "Species": self.species,
-                    "Subsample": self.subsample,
-                    "Analyst": self.analyst,
-                    "Project": self.project,
-                    "Year": self.year,
-                    "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Lab_method_code": self.lab_method_code,
-                    "ID": snail.snail_id,
-                    "Length(mm)": round(snail.length, 2),
-                    "Width(mm)": round(snail.width, 2)
+                    "pos_key": self.pos_key,
+                    "species": self.species,
+                    "subsample": self.subsample,
+                    "analyst": self.analyst,
+                    "project": self.project,
+                    "year": self.year,
+                    "datetime": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "lab_method_code": self.lab_method_code,
+                    "id": snail.snail_id,
+                    "length_mm": round(snail.length, 2),
+                    "width_mm": round(snail.width, 2)
                 }
                 writer.writerow(row)
 
@@ -861,16 +861,16 @@ class SnailGUI:
             for bin_size in bin_measurments:
                 n_snails = bin_measurments[bin_size]
                 row = {
-                    "Pos_key": self.pos_key,
-                    "Species": self.species,
-                    "Subsample": self.subsample,
-                    "Analyst": self.analyst,
-                    "Project": self.project,
-                    "Year": self.year,
-                    "Time of measurement": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Lab_method_code": self.lab_method_code,
-                    "Size": bin_size,
-                    "N_snails_size": n_snails,
+                    "pos_key": self.pos_key,
+                    "species": self.species,
+                    "subsample": self.subsample,
+                    "analyst": self.analyst,
+                    "project": self.project,
+                    "year": self.year,
+                    "datetime": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "lab_method_code": self.lab_method_code,
+                    "size": bin_size,
+                    "n_snails_size": n_snails,
                 }
                 writer.writerow(row)
 
