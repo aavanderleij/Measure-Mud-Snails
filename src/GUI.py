@@ -54,6 +54,7 @@ class SnailGUI:
         self.original_loaded_image = None
         self.annotated_image_rgb = None
         self.full_annotated_image_rgb = None
+        self.img_tk = None
         self.detected_snails = {}
         self.snail_measurer = None
         self.current_snail_idx = tk.IntVar(value=0)
@@ -73,6 +74,11 @@ class SnailGUI:
         self.analyst = None
         self.project = None
         self.year = None
+
+        self.current_zoom = 1.0
+        self.offset_x = 0
+        self.offset_y = 0
+        self._pan_start = (0, 0)
 
         self.setup_layout()
 
@@ -360,12 +366,16 @@ class SnailGUI:
         """
         Sets the processed image for display in right panel canvas.
         """
+
         img_pil = Image.fromarray(image)
-        img_pil = img_pil.resize((self.canvas_width, self.canvas_height), resample=Image.Resampling.LANCZOS)
+        img_pil = img_pil.resize((self.canvas_width, self.canvas_height),
+                                 resample=Image.Resampling.LANCZOS)
         self.img_tk = ImageTk.PhotoImage(img_pil)
         self.processed_canvas.create_image(0, 0, anchor="nw", image=self.img_tk)
         self.processed_canvas.image = self.img_tk
+        self.bind_canvas_events()
         self.processed_canvas.bind("<Button-1>", self.on_snail_click)
+
 
 
     def on_snail_click(self, event):
@@ -374,15 +384,31 @@ class SnailGUI:
         When a snail is clicked, it will be selected and the dislpay will be updated.
         """
 
-        # caluclate scale 
+        # caluclate scale
         orig_h, orig_w = self.original_loaded_image.shape[:2]
-        scale_x = self.canvas_width / orig_w
-        scale_y = self.canvas_height / orig_h
+        # scale_x = self.canvas_width / orig_w
+        # scale_y = self.canvas_height / orig_h
+
+        scale_x = self.img_tk.width() / orig_w
+        scale_y = self.img_tk.height() / orig_h
+
+        print(f"click x =  {event.x}")
+        print(f"click y =  {event.y}")
+
+        print(f"offset x = {self.offset_x}")
+        print(f"offset y = {self.offset_y}")
+
+        print(f"canvas img width {self.img_tk.width()}")
+        print(f"canvas img height {self.img_tk.height()}")
+
+        print(f"scale x = {scale_x}")
+        print(f"scale y = {scale_y}")
 
         # snail bounding box is saved in original image pixel coordinates
         # divide by scale to get point to match original image pixel coordinates
-        click_point = Point((event.x / scale_x),
-                            (event.y / scale_y))
+        click_point = Point(((event.x - self.offset_x) / scale_x),
+                            ((event.y - self.offset_y) / scale_y))
+        print(click_point)
         for snail in self.detected_snails.values():
             snail_bbx = Polygon(snail.bounding_box)
             if snail_bbx.contains(click_point):
@@ -390,7 +416,7 @@ class SnailGUI:
                 self.inspector.goto_snail(snail.snail_id)
                 self.update_single_snail_display()
                 return
-        
+
 
     def update_single_snail_display(self):
         """
@@ -406,6 +432,7 @@ class SnailGUI:
 
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         self.set_processed_image(self.annotated_image_rgb)
+        self.redraw_canvas()
         self.snail_id_entry.delete(0, tk.END)
         self.snail_id_entry.insert(0, str(snail_id))
 
@@ -512,6 +539,61 @@ class SnailGUI:
 
         self.annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
         self.set_processed_image(self.annotated_image_rgb)
+
+    def bind_canvas_events(self):
+        """
+        Bind zoom events to canvas
+        """
+        self.processed_canvas.bind("<ButtonPress-3>", self.start_pan)
+        self.processed_canvas.bind("<B3-Motion>", self.do_pan)
+        self.processed_canvas.bind("<MouseWheel>", self.do_zoom)
+
+    def start_pan(self, event):
+        """
+        set start pan location
+
+        Args:
+            event: <ButtonPress-3> right mouse button is clicked
+        """
+        self._pan_start = (event.x, event.y)
+
+    def do_pan(self, event):
+        """
+        move picture in with mouse movement
+
+        args:
+            event: <B3-Motion> movement while right mouse button is held
+        """
+        dx = event.x - self._pan_start[0]
+        dy = event.y - self._pan_start[1]
+        self.offset_x += dx
+        self.offset_y += dy
+        self._pan_start = (event.x, event.y)
+        self.redraw_canvas()
+
+    def do_zoom(self, event):
+        """
+        Zoom in picture in canvas with factor 0.1 with mouseweel event
+
+        Args: 
+            event: <MouseWheel>, Scroll wheel
+        """
+        factor = 1.1 if (getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4) else 0.9
+        self.current_zoom *= factor
+        self.redraw_canvas()
+
+    def redraw_canvas(self):
+        """ 
+        Redraw image at new zoom/offset
+        """
+        img_pil = Image.fromarray(self.annotated_image_rgb)
+        new_w = int(self.canvas_width * self.current_zoom)
+        new_h = int(self.canvas_height * self.current_zoom)
+        img_pil = img_pil.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+        self.img_tk = ImageTk.PhotoImage(img_pil)
+        self.bg_img_id = self.processed_canvas.create_image(self.offset_x, self.offset_y,
+                                                            anchor="nw", image=self.img_tk)
+        self.processed_canvas.image = self.img_tk
 
     def get_pos_key(self, _event=None):
         """
